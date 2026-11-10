@@ -1,2605 +1,412 @@
 <!DOCTYPE html>
-<html lang="en"><head><script data-bard-client-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
-        window.__firebase_config = firebaseConfig;
-        window.__initial_auth_token = initialAuthToken;
-        window.__app_id = appId;
-            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwNTYyODUwMjgxMDc0MjM2NDA2NCIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjXzY5MDVkYjA0ODVkOWRiMGRfaW5kZXguaHRtbC0zNzAifSwiZXhwIjoxNzk0MjA3MDEwLCJpYXQiOjE3OTQyMDM0MTAsImFsZyI6IlJTMjU2In0.dX6qbcEcdqnnlrxi01dSxU_E9V-RFcK1G-RSmDLd2NT4fhWuX3vL5GA5cXIwfdTEGjUCu3qzGPbKiDq0GOBRk5n2JNnAEE1R6pZE_EQPN0xEIwv2qouKDCoeTt-cpB3OYz2McaqKfcxeAt-3r5tytXOwKFm9saX_dNPprkNws6fQ14AibdLgbo-97UXLP-twckXSbItyXNwJAcsG5g9iijUgmq8OqAgY4CLAYU1TIOoiHAP7pgeq8IZMUNGtiT5P-Nw1XqDZRulpLTdN3PZ0yXo1pgjG6o8YCNzZfUpKe2_xYf0qO4ObKqV2TvZ3BqmmqpM_jlpNsVC84ObIOg2myA","c_6905db0485d9db0d_index.html-370")</script><script data-bard-client-injected="true">
-  document.addEventListener('input', (event) => {
-    if (event.target && (event.target.isContentEditable || event.target.hasAttribute('contenteditable'))) {
-      const clonedDoc = document.cloneNode(true);
-      const injectedScripts = clonedDoc.querySelectorAll('[data-bard-client-injected="true"]');
-      injectedScripts.forEach(el => el.remove());
-      window.parent.postMessage({
-        type: 'inlineEdit',
-        html: '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML
-      }, '*');
-    }
-  });
-</script><script data-bard-client-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
-</script><script data-bard-client-injected="true">(function() {
-  const SCROLL_KEYS = new Set([
-    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    ' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End',
-  ]);
-  const HORIZONTAL_KEYS = new Set(['ArrowLeft', 'ArrowRight']);
-
-  function isTextEntryTarget(target) {
-    if (!target) return false;
-    const tagName = target.tagName;
-    return tagName === 'INPUT' || tagName === 'TEXTAREA' ||
-        tagName === 'SELECT' || target.isContentEditable === true;
-  }
-
-  // An element absorbs the key only if it both overflows on the axis being
-  // scrolled and is configured to scroll on that axis. The cheap dimension
-  // test runs first because getComputedStyle forces a style recalc, and this
-  // runs on every keypress. Each axis is read from its own longhand: the
-  // 'overflow' shorthand serializes as two values when the axes differ, which
-  // is the common 'overflow-x: hidden; overflow-y: auto' pane.
-  function canScroll(node, horizontal) {
-    const overflows = horizontal ? node.scrollWidth > node.clientWidth
-                                 : node.scrollHeight > node.clientHeight;
-    if (!overflows) return false;
-    const style = window.getComputedStyle(node);
-    const overflow = horizontal ? style.overflowX : style.overflowY;
-    return overflow === 'auto' || overflow === 'scroll';
-  }
-
-  // Walks up from the event target so nested scrollers keep their behavior.
-  // <body> is included because pages that pin the root height make it the
-  // scroll container.
-  function hasScrollableAncestor(target, horizontal) {
-    let node = target;
-    while (node && node !== document.documentElement) {
-      if (canScroll(node, horizontal)) return true;
-      node = node.parentElement;
-    }
-    return false;
-  }
-
-  function rootCanScroll(horizontal) {
-    const scroller = document.scrollingElement || document.documentElement;
-    if (!scroller) return false;
-    // Tolerate a pixel of rounding so subpixel layouts do not look scrollable.
-    return horizontal ? scroller.scrollWidth > window.innerWidth + 1
-                      : scroller.scrollHeight > window.innerHeight + 1;
-  }
-
-  window.addEventListener('keydown', function(event) {
-    if (!SCROLL_KEYS.has(event.key)) return;
-    if (event.defaultPrevented) return;
-    // Alt and Meta turn arrows into browser history navigation, and Ctrl is
-    // reserved for shortcuts, so none of them are scroll intent.
-    if (event.altKey || event.metaKey || event.ctrlKey) return;
-
-    const target = event.target;
-    if (isTextEntryTarget(target)) return;
-
-    // Anything that can still absorb the scroll gets to keep it.
-    const horizontal = HORIZONTAL_KEYS.has(event.key);
-    if (rootCanScroll(horizontal)) return;
-    if (hasScrollableAncestor(target, horizontal)) return;
-
-    event.preventDefault();
-  }, {capture: true, passive: false});
-})();</script><script data-bard-client-injected="true">(function() {
-  // Ensure this script is executed only once
-  if (window.firebaseAuthBridgeScriptLoaded) {
-    return;
-  }
-  window.firebaseAuthBridgeScriptLoaded = true;
-
-  let nextTokenPromiseId = 0;
-
-  // Stores { resolve, reject } for ongoing token requests
-  const pendingTokenPromises = {};
-
-  // Listen for messages from the Host Application
-  window.addEventListener('message', function(event) {
-
-    const messageData = event.data;
-
-  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
-      const { success, token, error, promiseId } = messageData ?? {};
-      if (pendingTokenPromises[promiseId]) {
-        if (success) {
-          pendingTokenPromises[promiseId].resolve(token);
-        } else {
-          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
-        }
-        delete pendingTokenPromises[promiseId];
-      }
-    }
-  });
-
-  // Expose a function for the Generated App to request a new Firebase token
-  window.requestNewFirebaseToken = function() {
-    const currentPromiseId = nextTokenPromiseId++;
-    const promise = new Promise((resolve, reject) => {
-      pendingTokenPromises[currentPromiseId] = { resolve, reject };
-    });
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({
-        type: 'REQUEST_NEW_FIREBASE_TOKEN',
-        promiseId: currentPromiseId
-      }, '*');
-    } else {
-      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
-      delete pendingTokenPromises[currentPromiseId];
-    }
-    return promise;
-  };
-})();</script><script data-bard-client-injected="true">
-let realOriginalGetUserMedia = null;
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-}
-
-(function() {
-  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
-    try {
-      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
-        get: function() {
-          return undefined; // Or throw an error
-        },
-        configurable: false
-      });
-    } catch (error) {
-      console.error("Error defining prototype getter:", error);
-    }
-  }
-})();
-
-(function() {
-  const pendingMediaResolvers = {};
-  let nextMediaPromiseId = 0;
-
-  function requestMediaPermissions(constraints) {
-    const mediaPromiseId = nextMediaPromiseId++;
-    const promise = new Promise((resolve, reject) => {
-      pendingMediaResolvers[mediaPromiseId] = (granted) => {
-        delete pendingMediaResolvers[mediaPromiseId];
-        resolve(granted);
-      };
-    });
-
-    window.parent.postMessage({
-      type: 'requestMediaPermission',
-      constraints: constraints,
-      promiseId: mediaPromiseId,
-    }, '*');
-
-    return promise;
-  }
-
-  let originalGetUserMedia = realOriginalGetUserMedia;
-
-  function interceptGetUserMedia() {
-    if (navigator.mediaDevices) {
-      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
-        value: function(constraints) {
-          return requestMediaPermissions(constraints).then((granted) => {
-            if (granted) {
-              if (originalGetUserMedia) {
-                return originalGetUserMedia(constraints);
-              } else {
-                throw new Error("Original getUserMedia not available.");
-              }
-            } else {
-              throw new DOMException('Permission denied', 'NotAllowedError');
-            }
-          });
-        },
-        writable: false,
-        configurable: false
-      });
-    }
-  }
-
-  interceptGetUserMedia();
-
-  const observer = new MutationObserver(function(mutationsList, observer) {
-    for (const mutation of mutationsList) {
-      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
-        interceptGetUserMedia();
-      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
-        interceptGetUserMedia();
-      } else if (mutation.type === 'childList' && mutation.addedNodes) {
-        mutation.addedNodes.forEach(node => {
-          if (node === navigator.mediaDevices) {
-            interceptGetUserMedia();
-          }
-        });
-      }
-    }
-  });
-
-  function interceptSpeechRecognition() {
-    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-      return;
-    }
-
-    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    const SpeechRecognitionWrapper = function(...args) {
-      const recognizer = new OriginalSpeechRecognition(...args);
-      const originalStart = recognizer.start.bind(recognizer);
-
-      recognizer.start = function() {
-        requestMediaPermissions({ audio: true }).then(granted => {
-          if (granted) {
-            originalStart();
-          } else {
-            const errorEvent = new SpeechRecognitionErrorEvent('error');
-            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
-            recognizer.dispatchEvent(errorEvent);
-          }
-        });
-      };
-
-      return recognizer;
-    };
-
-    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
-    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
-
-    if (window.SpeechRecognition) {
-      window.SpeechRecognition = SpeechRecognitionWrapper;
-    }
-    if (window.webkitSpeechRecognition) {
-      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
-    }
-  }
-
-  interceptSpeechRecognition();
-
-  window.addEventListener('message', function(event) {
-    if (event.data) {
-      if (event.data.type === 'resolveMediaPermission') {
-        const { promiseId, granted } = event.data;
-        if (pendingMediaResolvers[promiseId]) {
-          pendingMediaResolvers[promiseId](granted);
-        }
-      }
-    }
-  });
-
-})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-client-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
-function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
-
- Copyright The Closure Library Authors.
- SPDX-License-Identifier: Apache-2.0
-*/
-function A(b,d){function e(){}e.prototype=d.prototype;b.j=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.h=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
-let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
-null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.i="";var l=0,t=null,r=null,q=[],F=new TextEncoder,G=new TextDecoder;
-c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*16|0;return(f===
-"x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;(g=t)==null||g.postMessage(a)}};
-Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
-(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
-url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
-</script><script data-bard-client-injected="true">((function(modelInformation) {
-  const originalFetch = window.fetch;
-  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
-  let googleLlmBaseApiUrls = [
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
-    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
-  ];
-  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
-    googleLlmBaseApiUrls.push(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
-    );
-  });
-  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
-    googleLlmBaseApiUrls.push(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
-    );
-  });
-  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
-    googleLlmBaseApiUrls.push(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
-    );
-  });
-  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
-    googleLlmBaseApiUrls.push(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
-    );
-  });
-
-  const pendingFetchResolvers = {};
-  let nextPromiseId = 0;
-
-  function handleStringInput(input, optionsArgument) {
-    const actualUrl = input;
-    const fetchCallArgs = [actualUrl, optionsArgument];
-    const effectiveOptions = optionsArgument || {};
-    const bodyForApiKeyCheck = effectiveOptions.body;
-    const bodyForPostMessage = effectiveOptions.body;
-    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
-  }
-
-  function handleRequestInput(input, optionsArgument) {
-    const actualUrl = input.url;
-    const fetchCallArgs = [input, optionsArgument];
-    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
-    let bodyForApiKeyCheck;
-    let bodyForPostMessage;
-
-    if (optionsArgument) {
-      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
-      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
-      if ('body' in optionsArgument) {
-        bodyForApiKeyCheck = optionsArgument.body;
-        bodyForPostMessage = optionsArgument.body;
-      } else {
-        bodyForApiKeyCheck = undefined;
-        bodyForPostMessage = input.body;
-      }
-    } else {
-      bodyForApiKeyCheck = undefined;
-      bodyForPostMessage = input.body;
-    }
-    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
-  }
-
-  window.fetch = function(input, optionsArgument) {
-    let actualUrl;
-    let fetchCallArgs;
-    let effectiveOptions = {};
-    let bodyForApiKeyCheck;
-    let bodyForPostMessage;
-
-    if (typeof input === 'string') {
-      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
-    } else if (input instanceof Request) {
-      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
-    } else {
-      return originalFetch.apply(window, [input, optionsArgument]);
-    }
-
-    effectiveOptions.method = effectiveOptions.method || 'GET';
-    if (!effectiveOptions.headers) {
-      effectiveOptions.headers = new Headers();
-    }
-
-
-    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
-      let apiKeyIsNull = true;
-
-      const regex = new RegExp("models/([^:]+)");
-      const modelNameMatch = actualUrl.match(regex);
-      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
-
-
-      try {
-        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
-        const apiKeyParam = urlObject.searchParams.get('key');
-        if (apiKeyParam) {
-          apiKeyIsNull = false;
-        }
-      } catch (e) {
-        // Continue checks even if URL parsing fails
-      }
-
-      if (apiKeyIsNull && effectiveOptions.headers) {
-        const h = new Headers(effectiveOptions.headers);
-        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
-        if (apiKeyHeaderValue) {
-          apiKeyIsNull = false;
-          return originalFetch.apply(window, fetchCallArgs);
-        }
-      }
-
-      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
-        try {
-          const bodyData = JSON.parse(bodyForApiKeyCheck);
-          if (bodyData && bodyData.apiKey) {
-            apiKeyIsNull = false;
-            return originalFetch.apply(window, fetchCallArgs);
-          }
-        } catch (e) {
-          // Ignore JSON parsing errors
-        }
-      }
-
-      if(apiKeyIsNull) {
-        const promiseId = nextPromiseId++;
-        const promise = new Promise((resolve) => {
-          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
-            delete pendingFetchResolvers[promiseId];
-            resolve(resolvedResponse);
-          };
-        });
-
-        let serializedBodyForPostMessage;
-        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
-            serializedBodyForPostMessage = bodyForPostMessage;
-        } else if (bodyForPostMessage instanceof ReadableStream) {
-            serializedBodyForPostMessage = null;
-        } else {
-            try {
-                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
-            } catch (e) {
-                serializedBodyForPostMessage = null;
-            }
-        }
-
-        const messageOptions = {
-            method: effectiveOptions.method,
-            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
-            body: serializedBodyForPostMessage
-        };
-
-        window.parent.postMessage({
-          type: 'requestFetch',
-          url: actualUrl,
-          modelName: modelName,
-          options: messageOptions,
-          promiseId: promiseId,
-        }, '*');
-
-        return promise;
-      }
-      return originalFetch.apply(window, fetchCallArgs);
-    }
-    return originalFetch.apply(window, fetchCallArgs);
-  };
-
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'resolveFetch') {
-      const { promiseId, response } = event.data;
-      if (pendingFetchResolvers[promiseId]) {
-        try {
-          const reconstructedResponse = new Response(response.body, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: new Headers(response.headers),
-          });
-          pendingFetchResolvers[promiseId](reconstructedResponse);
-        } catch (error) {
-          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
-        }
-      }
-    }
-  });
-
-}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-client-injected="true">(function() {
-  function normalizeSlug(str) {
-    try {
-      return str
-        .trim()
-        .toLowerCase()
-        .replace(/[^p{L}p{N}s_-]/gu, '')
-        .replace(/s+/g, '-');
-    } catch (e) {
-      return str
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9s_-]/g, '')
-        .replace(/s+/g, '-');
-    }
-  }
-
-  function findTargetElement(hash) {
-    if (!hash || hash === '#') {
-      return null;
-    }
-    const rawId = hash.startsWith('#') ? hash.slice(1) : hash;
-    let decodedId = rawId;
-    try {
-      decodedId = decodeURIComponent(rawId);
-    } catch (e) {
-      // Ignore URI malformed errors.
-    }
-
-    // 1. Direct ID match (raw and decoded).
-    let target = document.getElementById(rawId) || document.getElementById(decodedId);
-    if (target) {
-      return target;
-    }
-
-    // 2. Name attribute match (<a name="...">).
-    try {
-      if (typeof CSS !== 'undefined' && CSS.escape) {
-        target =
-          document.querySelector('[name="' + CSS.escape(rawId) + '"]') ||
-          document.querySelector('[name="' + CSS.escape(decodedId) + '"]');
-      } else {
-        const namedElements = document.getElementsByName(rawId);
-        if (namedElements && namedElements.length > 0) {
-          return namedElements[0];
-        }
-      }
-    } catch (e) {
-      // Ignore querySelector syntax errors.
-    }
-    if (target) {
-      return target;
-    }
-
-    // 3. Match heading text by slug (for Markdown TOCs where headings lack explicit IDs).
-    const targetSlug = normalizeSlug(decodedId);
-    if (targetSlug) {
-      for (const heading of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
-        if (normalizeSlug(heading.textContent || '') === targetSlug) {
-          return heading;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  document.addEventListener('click', function(event) {
-    const target = event.target;
-    const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
-    if (!anchor) {
-      return;
-    }
-
-    const href = anchor.getAttribute('href');
-    if (
-      !href ||
-      href.trim().toLowerCase().startsWith('javascript:') ||
-      anchor.hasAttribute('download')
-    ) {
-      return;
-    }
-
-    // Check if the link is an in-page hash / anchor link.
-    if (href.startsWith('#')) {
-      event.preventDefault();
-      const targetElement = findTargetElement(href);
-      if (targetElement) {
-        targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
-      }
-      return;
-    }
-
-    // Check if the URL has the same origin/pathname but with a hash.
-    try {
-      const url = new URL(anchor.href, window.location.href);
-      if (
-        url.hash &&
-        url.origin === window.location.origin &&
-        url.pathname === window.location.pathname
-      ) {
-        event.preventDefault();
-        const targetElement = findTargetElement(url.hash);
-        if (targetElement) {
-          targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
-        }
-        return;
-      }
-    } catch (e) {
-      // Fall through if URL parsing fails.
-    }
-
-    // For all external or full navigation links, prevent iframe-level navigation
-    // (which breaks in AGSA WebView or sandboxed iframes) and ensure they open
-    // safely in a new tab/window.
-    if (anchor.target !== '_blank') {
-      event.preventDefault();
-      window.open(anchor.href, '_blank', 'noopener,noreferrer');
-    }
-  }, {capture: true});
-})();</script><script data-bard-client-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
-</script><script data-bard-client-injected="true">(function() {
-  const originalConsoleLog = console.log;
-  const originalConsoleError = console.error;
-
-    /**
-   * Normalizes an error event or a promise rejection reason into a structured error object.
-   * @param {*} errorEventOrReason The error object or reason.
-   * @return {object} Structured error data { message, name, stack }.
-   */
-  function getErrorObject(errorEventOrReason) {
-    if (errorEventOrReason instanceof Error) {
-      return {
-        message: errorEventOrReason.message,
-        name: errorEventOrReason.name,
-        stack: errorEventOrReason.stack,
-      };
-    }
-    // Fallback for non-Error objects.
-    try {
-      return {
-        message: JSON.stringify(errorEventOrReason),
-        name: 'UnknownErrorType',
-        stack: null,
-      };
-    } catch (e) {
-      return {
-        message: String(errorEventOrReason),
-        name: 'UnknownErrorTypeNonStringifiable',
-        stack: null,
-      };
-    }
-  }
-
-  /**
-   * Converts an array of arguments (from log/error) into a single string.
-   * Handles Error objects specially to include their message and stack.
-   * @param {Array<*>} args - Arguments passed to console methods.
-   * @return {string} A string representation of the arguments.
-   */
-  function stringifyArgs(args) {
-    return args
-      .map((arg) => {
-        if (arg instanceof Error) {
-          const {message, stack} = arg;
-          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
-        }
-        if (typeof arg === 'object' && arg !== null) {
-          try {
-            return JSON.stringify(arg);
-          } catch (error) {
-            return '[Circular Object]';
-          }
-        } else {
-          return String(arg);
-        }
-      })
-      .join(' ');
-  }
-
-  console.log = function(...args) {
-    const logString = stringifyArgs(args);
-    window.parent.postMessage({ type: 'log', message: logString }, '*');
-    originalConsoleLog.apply(console, args);
-  };
-
-  console.error = function(...args) {
-    let errorData;
-    if (args.length > 0 && args[0] instanceof Error) {
-      const err = args[0];
-      // If the first arg is an Error, capture its details.
-      errorData = {
-        type: 'error',
-        source: 'CONSOLE_ERROR',
-        ...getErrorObject(err),
-        rawArgsString: stringifyArgs(args.slice(1)),
-        timestamp: new Date().toISOString(),
-      };
-    } else {
-      // If not an Error object, treat all args as a general error message.
-      errorData = {
-        type: 'error',
-        source: 'CONSOLE_ERROR',
-        message: stringifyArgs(args),
-        name: 'ConsoleLoggedError',
-        stack: null,
-        timestamp: new Date().toISOString(),
-      };
-    }
-    window.parent.postMessage(errorData, '*');
-    originalConsoleError.apply(console, args);
-  };
-
-  // Listen for global unhandled synchronous errors.
-  window.addEventListener('error', function(event) {
-    const errorDetails = event.error ? getErrorObject(event.error) : {
-      message: event.message,
-      name: 'GlobalError',
-      stack: null,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-    };
-
-    window.parent.postMessage({
-      type: 'error',
-      source: 'global',
-      ...errorDetails,
-      message: errorDetails.message || event.message,
-      timestamp: new Date().toISOString(),
-    }, '*');
-  });
-
-  // Listen for unhandled promise rejections (asynchronous errors).
-  window.addEventListener('unhandledrejection', function(event) {
-    const errorDetails = getErrorObject(event.reason);
-
-    window.parent.postMessage({
-      type: 'error',
-      source: 'unhandledrejection',
-      ...errorDetails,
-      message: errorDetails.message || 'Unhandled Promise Rejection',
-      timestamp: new Date().toISOString(),
-    }, '*');
-  });
-
-})();</script>
+<html lang="en">
+<head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Baby Shower: The Price Is Right &amp; Baby Trivia Feud</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
-  <!-- Optional QRious for Canvas QR Code (with built-in SVG fallback) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js" defer="" crossorigin="anonymous"></script>
-  <!-- Optional PeerJS for Live Cross-Device Phone-to-TV Sync on GitHub Pages -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" defer="" crossorigin="anonymous"></script>
-  <!-- Optional Canvas Confetti -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" defer="" crossorigin="anonymous"></script>
-
-  <script>
-    if (typeof tailwind !== 'undefined') {
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              display: ['Fredoka', 'sans-serif'],
-              sans: ['Plus Jakarta Sans', 'sans-serif'],
-            }
-          }
-        }
-      };
-    }
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baby Shower: Price Is Right & Trivia Feud</title>
+  
+  <!-- Firebase App & Realtime Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
   <style>
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at top left, #fce7f3 0%, #e0f2fe 52%, #fef3c7 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
+    :root {
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-sub: #4b5563;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --border-color: #e5e7eb;
     }
-    .font-display {
-      font-family: 'Fredoka', sans-serif;
-    }
-    .bg-stage-gradient {
-      background: radial-gradient(circle at center, #312e81 0%, #1e1b4b 100%);
-    }
-    .game-card {
-      box-shadow: 0 20px 40px -15px rgba(30, 27, 75, 0.12), 0 0 1px 1px rgba(30, 27, 75, 0.05);
-    }
-    .btn-3d {
-      transition: all 0.15s ease;
-      box-shadow: 0 5px 0 0 rgba(0, 0, 0, 0.22);
-    }
-    .btn-3d:active {
-      transform: translateY(3px);
-      box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.22);
-    }
-    @keyframes floatSlow {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-6px); }
-    }
-    .animate-float {
-      animation: floatSlow 3.2s ease-in-out infinite;
-    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 1rem; }
+    
+    .container { max-width: 900px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1.5rem; }
+    header { text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+    h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 0.25rem; }
+    p.subtitle { color: var(--text-sub); font-size: 0.95rem; }
+    
+    .view { display: none; }
+    .view.active { display: block; }
+    
+    .btn { display: inline-block; width: 100%; padding: 0.75rem 1rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; text-align: center; transition: background 0.2s; }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-accent { background-color: var(--accent); color: white; }
+    .btn-accent:hover { background-color: var(--accent-hover); }
+    .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-sub); }
+    input[type="text"], input[type="number"] { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
+    
+    .lobby-box { text-align: center; padding: 1.5rem; background: #eef2ff; border-radius: 8px; margin-bottom: 1rem; }
+    .room-code { font-size: 2.5rem; font-weight: 800; letter-spacing: 4px; color: var(--primary); margin: 0.5rem 0; }
+    #qrcode { display: flex; justify-content: center; margin: 1rem 0; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media(min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    
+    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
+    
+    .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+    .round-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
+    .round-desc { color: var(--text-sub); font-size: 1rem; margin-bottom: 1rem; }
+    .reveal-price { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 1rem 0; display: none; }
+    
+    .guess-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    .guess-table th, .guess-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .guess-table th { background-color: #f3f4f6; color: var(--text-sub); font-size: 0.85rem; text-transform: uppercase; }
+    .winner-row { background-color: #d1fae5; font-weight: bold; }
+    
+    .manual-entry { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); }
   </style>
-<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:Plus Jakarta Sans, sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0px}.bottom-4{bottom:1rem}.left-4{left:1rem}.right-3{right:0.75rem}.right-4{right:1rem}.top-0{top:0px}.top-1\/2{top:50%}.top-3{top:0.75rem}.left-3{left:0.75rem}.z-40{z-index:40}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.my-0\.5{margin-top:0.125rem;margin-bottom:0.125rem}.my-auto{margin-top:auto;margin-bottom:auto}.mb-1{margin-bottom:0.25rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-2\.5{margin-bottom:0.625rem}.mb-3{margin-bottom:0.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3{margin-top:0.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.line-clamp-2{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-10{height:2.5rem}.h-12{height:3rem}.h-32{height:8rem}.h-36{height:9rem}.h-48{height:12rem}.h-8{height:2rem}.h-6{height:1.5rem}.max-h-60{max-height:15rem}.max-h-72{max-height:18rem}.max-h-80{max-height:20rem}.max-h-\[290px\]{max-height:290px}.max-h-\[340px\]{max-height:340px}.max-h-\[90vh\]{max-height:90vh}.max-h-\[70vh\]{max-height:70vh}.min-h-screen{min-height:100vh}.w-1\.5{width:0.375rem}.w-10{width:2.5rem}.w-12{width:3rem}.w-32{width:8rem}.w-36{width:9rem}.w-8{width:2rem}.w-80{width:20rem}.w-full{width:100%}.w-6{width:1.5rem}.min-w-0{min-width:0px}.max-w-2xl{max-width:42rem}.max-w-3xl{max-width:48rem}.max-w-4xl{max-width:56rem}.max-w-7xl{max-width:80rem}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.max-w-xl{max-width:36rem}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes bounce{0%, 100%{transform:translateY(-25%);animation-timing-function:cubic-bezier(0.8,0,1,1)}50%{transform:none;animation-timing-function:cubic-bezier(0,0,0.2,1)}}.animate-bounce{animation:bounce 1s infinite}@keyframes ping{75%, 100%{transform:scale(2);opacity:0}}.animate-ping{animation:ping 1s cubic-bezier(0, 0, 0.2, 1) infinite}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.list-inside{list-style-position:inside}.list-decimal{list-style-type:decimal}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-end{align-items:flex-end}.items-center{align-items:center}.items-stretch{align-items:stretch}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-2\.5{gap:0.625rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.space-y-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.375rem * var(--tw-space-y-reverse))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.overflow-y-auto{overflow-y:auto}.break-all{word-break:break-all}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-\[2\.2rem\]{border-radius:2.2rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.rounded-\[1\.6rem\]{border-radius:1.6rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-b{border-bottom-width:1px}.border-t{border-top-width:1px}.border-amber-200{--tw-border-opacity:1;border-color:rgb(253 230 138 / var(--tw-border-opacity, 1))}.border-amber-300{--tw-border-opacity:1;border-color:rgb(252 211 77 / var(--tw-border-opacity, 1))}.border-amber-300\/80{border-color:rgb(252 211 77 / 0.8)}.border-emerald-200{--tw-border-opacity:1;border-color:rgb(167 243 208 / var(--tw-border-opacity, 1))}.border-indigo-100{--tw-border-opacity:1;border-color:rgb(224 231 255 / var(--tw-border-opacity, 1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254 / var(--tw-border-opacity, 1))}.border-indigo-600{--tw-border-opacity:1;border-color:rgb(79 70 229 / var(--tw-border-opacity, 1))}.border-indigo-700\/50{border-color:rgb(67 56 202 / 0.5)}.border-indigo-700\/70{border-color:rgb(67 56 202 / 0.7)}.border-pink-100{--tw-border-opacity:1;border-color:rgb(252 231 243 / var(--tw-border-opacity, 1))}.border-pink-200{--tw-border-opacity:1;border-color:rgb(251 207 232 / var(--tw-border-opacity, 1))}.border-pink-400\/40{border-color:rgb(244 114 182 / 0.4)}.border-slate-100{--tw-border-opacity:1;border-color:rgb(241 245 249 / var(--tw-border-opacity, 1))}.border-slate-200{--tw-border-opacity:1;border-color:rgb(226 232 240 / var(--tw-border-opacity, 1))}.border-slate-200\/80{border-color:rgb(226 232 240 / 0.8)}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85 / var(--tw-border-opacity, 1))}.border-transparent{border-color:transparent}.bg-amber-100{--tw-bg-opacity:1;background-color:rgb(254 243 199 / var(--tw-bg-opacity, 1))}.bg-amber-400{--tw-bg-opacity:1;background-color:rgb(251 191 36 / var(--tw-bg-opacity, 1))}.bg-amber-400\/20{background-color:rgb(251 191 36 / 0.2)}.bg-black\/30{background-color:rgb(0 0 0 / 0.3)}.bg-emerald-100{--tw-bg-opacity:1;background-color:rgb(209 250 229 / var(--tw-bg-opacity, 1))}.bg-emerald-50{--tw-bg-opacity:1;background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))}.bg-emerald-500{--tw-bg-opacity:1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-emerald-600{--tw-bg-opacity:1;background-color:rgb(5 150 105 / var(--tw-bg-opacity, 1))}.bg-indigo-100{--tw-bg-opacity:1;background-color:rgb(224 231 255 / var(--tw-bg-opacity, 1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255 / var(--tw-bg-opacity, 1))}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.bg-indigo-900\/50{background-color:rgb(49 46 129 / 0.5)}.bg-indigo-900\/80{background-color:rgb(49 46 129 / 0.8)}.bg-indigo-950{--tw-bg-opacity:1;background-color:rgb(30 27 75 / var(--tw-bg-opacity, 1))}.bg-indigo-950\/70{background-color:rgb(30 27 75 / 0.7)}.bg-pink-100{--tw-bg-opacity:1;background-color:rgb(252 231 243 / var(--tw-bg-opacity, 1))}.bg-pink-50{--tw-bg-opacity:1;background-color:rgb(253 242 248 / var(--tw-bg-opacity, 1))}.bg-pink-500{--tw-bg-opacity:1;background-color:rgb(236 72 153 / var(--tw-bg-opacity, 1))}.bg-pink-500\/20{background-color:rgb(236 72 153 / 0.2)}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249 / var(--tw-bg-opacity, 1))}.bg-slate-200{--tw-bg-opacity:1;background-color:rgb(226 232 240 / var(--tw-bg-opacity, 1))}.bg-slate-50{--tw-bg-opacity:1;background-color:rgb(248 250 252 / var(--tw-bg-opacity, 1))}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-slate-950\/60{background-color:rgb(2 6 23 / 0.6)}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/15{background-color:rgb(255 255 255 / 0.15)}.bg-white\/90{background-color:rgb(255 255 255 / 0.9)}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.bg-gradient-to-br{background-image:linear-gradient(to bottom right, var(--tw-gradient-stops))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.bg-gradient-to-tr{background-image:linear-gradient(to top right, var(--tw-gradient-stops))}.from-amber-100{--tw-gradient-from:#fef3c7 var(--tw-gradient-from-position);--tw-gradient-to:rgb(254 243 199 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-amber-400{--tw-gradient-from:#fbbf24 var(--tw-gradient-from-position);--tw-gradient-to:rgb(251 191 36 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-emerald-400{--tw-gradient-from:#34d399 var(--tw-gradient-from-position);--tw-gradient-to:rgb(52 211 153 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-indigo-50{--tw-gradient-from:#eef2ff var(--tw-gradient-from-position);--tw-gradient-to:rgb(238 242 255 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-indigo-600{--tw-gradient-from:#4f46e5 var(--tw-gradient-from-position);--tw-gradient-to:rgb(79 70 229 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-indigo-950{--tw-gradient-from:#1e1b4b var(--tw-gradient-from-position);--tw-gradient-to:rgb(30 27 75 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-pink-500{--tw-gradient-from:#ec4899 var(--tw-gradient-from-position);--tw-gradient-to:rgb(236 72 153 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.via-pink-50{--tw-gradient-to:rgb(253 242 248 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), #fdf2f8 var(--tw-gradient-via-position), var(--tw-gradient-to)}.via-pink-600{--tw-gradient-to:rgb(219 39 119 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), #db2777 var(--tw-gradient-via-position), var(--tw-gradient-to)}.via-yellow-50{--tw-gradient-to:rgb(254 252 232 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), #fefce8 var(--tw-gradient-via-position), var(--tw-gradient-to)}.to-amber-100{--tw-gradient-to:#fef3c7 var(--tw-gradient-to-position)}.to-amber-50{--tw-gradient-to:#fffbeb var(--tw-gradient-to-position)}.to-amber-500{--tw-gradient-to:#f59e0b var(--tw-gradient-to-position)}.to-amber-600{--tw-gradient-to:#d97706 var(--tw-gradient-to-position)}.to-indigo-600{--tw-gradient-to:#4f46e5 var(--tw-gradient-to-position)}.to-orange-500{--tw-gradient-to:#f97316 var(--tw-gradient-to-position)}.to-purple-600{--tw-gradient-to:#9333ea var(--tw-gradient-to-position)}.to-rose-500{--tw-gradient-to:#f43f5e var(--tw-gradient-to-position)}.to-teal-500{--tw-gradient-to:#14b8a6 var(--tw-gradient-to-position)}.bg-clip-text{-webkit-background-clip:text;background-clip:text}.object-contain{object-fit:contain}.p-2{padding:0.5rem}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-3\.5{padding:0.875rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-1\.5{padding:0.375rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-3\.5{padding-left:0.875rem;padding-right:0.875rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-8{padding-top:2rem;padding-bottom:2rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.pb-3{padding-bottom:0.75rem}.pb-4{padding-bottom:1rem}.pl-10{padding-left:2.5rem}.pr-1{padding-right:0.25rem}.pr-4{padding-right:1rem}.pt-3{padding-top:0.75rem}.pt-4{padding-top:1rem}.pt-5{padding-top:1.25rem}.pb-2{padding-bottom:0.5rem}.pl-7{padding-left:1.75rem}.pr-3{padding-right:0.75rem}.pt-2{padding-top:0.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.font-display{font-family:Fredoka, sans-serif}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.font-sans{font-family:Plus Jakarta Sans, sans-serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}.text-7xl{font-size:4.5rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-normal{font-weight:400}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.leading-snug{line-height:1.375}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-amber-100{--tw-text-opacity:1;color:rgb(254 243 199 / var(--tw-text-opacity, 1))}.text-amber-300{--tw-text-opacity:1;color:rgb(252 211 77 / var(--tw-text-opacity, 1))}.text-amber-800{--tw-text-opacity:1;color:rgb(146 64 14 / var(--tw-text-opacity, 1))}.text-amber-900{--tw-text-opacity:1;color:rgb(120 53 15 / var(--tw-text-opacity, 1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105 / var(--tw-text-opacity, 1))}.text-emerald-700{--tw-text-opacity:1;color:rgb(4 120 87 / var(--tw-text-opacity, 1))}.text-emerald-800{--tw-text-opacity:1;color:rgb(6 95 70 / var(--tw-text-opacity, 1))}.text-emerald-950{--tw-text-opacity:1;color:rgb(2 44 34 / var(--tw-text-opacity, 1))}.text-indigo-200{--tw-text-opacity:1;color:rgb(199 210 254 / var(--tw-text-opacity, 1))}.text-indigo-300{--tw-text-opacity:1;color:rgb(165 180 252 / var(--tw-text-opacity, 1))}.text-indigo-600{--tw-text-opacity:1;color:rgb(79 70 229 / var(--tw-text-opacity, 1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202 / var(--tw-text-opacity, 1))}.text-indigo-800{--tw-text-opacity:1;color:rgb(55 48 163 / var(--tw-text-opacity, 1))}.text-indigo-900{--tw-text-opacity:1;color:rgb(49 46 129 / var(--tw-text-opacity, 1))}.text-indigo-950{--tw-text-opacity:1;color:rgb(30 27 75 / var(--tw-text-opacity, 1))}.text-pink-200{--tw-text-opacity:1;color:rgb(251 207 232 / var(--tw-text-opacity, 1))}.text-pink-600{--tw-text-opacity:1;color:rgb(219 39 119 / var(--tw-text-opacity, 1))}.text-pink-700{--tw-text-opacity:1;color:rgb(190 24 93 / var(--tw-text-opacity, 1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184 / var(--tw-text-opacity, 1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139 / var(--tw-text-opacity, 1))}.text-slate-600{--tw-text-opacity:1;color:rgb(71 85 105 / var(--tw-text-opacity, 1))}.text-slate-700{--tw-text-opacity:1;color:rgb(51 65 85 / var(--tw-text-opacity, 1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59 / var(--tw-text-opacity, 1))}.text-slate-900{--tw-text-opacity:1;color:rgb(15 23 42 / var(--tw-text-opacity, 1))}.text-slate-950{--tw-text-opacity:1;color:rgb(2 6 23 / var(--tw-text-opacity, 1))}.text-transparent{color:transparent}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-pink-400{--tw-text-opacity:1;color:rgb(244 114 182 / var(--tw-text-opacity, 1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225 / var(--tw-text-opacity, 1))}.placeholder-indigo-400::placeholder{--tw-placeholder-opacity:1;color:rgb(129 140 248 / var(--tw-placeholder-opacity, 1))}.shadow{--tw-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.selection\:bg-pink-500 *::selection{--tw-bg-opacity:1;background-color:rgb(236 72 153 / var(--tw-bg-opacity, 1))}.selection\:text-white *::selection{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.selection\:bg-pink-500::selection{--tw-bg-opacity:1;background-color:rgb(236 72 153 / var(--tw-bg-opacity, 1))}.selection\:text-white::selection{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:bg-amber-200:hover{--tw-bg-opacity:1;background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))}.hover\:bg-amber-300:hover{--tw-bg-opacity:1;background-color:rgb(252 211 77 / var(--tw-bg-opacity, 1))}.hover\:bg-emerald-500:hover{--tw-bg-opacity:1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.hover\:bg-emerald-700:hover{--tw-bg-opacity:1;background-color:rgb(4 120 87 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-100:hover{--tw-bg-opacity:1;background-color:rgb(224 231 255 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-200:hover{--tw-bg-opacity:1;background-color:rgb(199 210 254 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-700:hover{--tw-bg-opacity:1;background-color:rgb(67 56 202 / var(--tw-bg-opacity, 1))}.hover\:bg-pink-100:hover{--tw-bg-opacity:1;background-color:rgb(252 231 243 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-100:hover{--tw-bg-opacity:1;background-color:rgb(241 245 249 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-200:hover{--tw-bg-opacity:1;background-color:rgb(226 232 240 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/25:hover{background-color:rgb(255 255 255 / 0.25)}.hover\:bg-slate-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.hover\:from-amber-300:hover{--tw-gradient-from:#fcd34d var(--tw-gradient-from-position);--tw-gradient-to:rgb(252 211 77 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:from-emerald-300:hover{--tw-gradient-from:#6ee7b7 var(--tw-gradient-from-position);--tw-gradient-to:rgb(110 231 183 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:from-indigo-500:hover{--tw-gradient-from:#6366f1 var(--tw-gradient-from-position);--tw-gradient-to:rgb(99 102 241 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:from-pink-400:hover{--tw-gradient-from:#f472b6 var(--tw-gradient-from-position);--tw-gradient-to:rgb(244 114 182 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:from-pink-600:hover{--tw-gradient-from:#db2777 var(--tw-gradient-from-position);--tw-gradient-to:rgb(219 39 119 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:to-amber-600:hover{--tw-gradient-to:#d97706 var(--tw-gradient-to-position)}.hover\:to-orange-400:hover{--tw-gradient-to:#fb923c var(--tw-gradient-to-position)}.hover\:to-purple-500:hover{--tw-gradient-to:#a855f7 var(--tw-gradient-to-position)}.hover\:to-rose-400:hover{--tw-gradient-to:#fb7185 var(--tw-gradient-to-position)}.hover\:to-teal-400:hover{--tw-gradient-to:#2dd4bf var(--tw-gradient-to-position)}.hover\:underline:hover{-webkit-text-decoration-line:underline;text-decoration-line:underline}.focus\:border-indigo-500:focus{--tw-border-opacity:1;border-color:rgb(99 102 241 / var(--tw-border-opacity, 1))}.focus\:border-pink-400:focus{--tw-border-opacity:1;border-color:rgb(244 114 182 / var(--tw-border-opacity, 1))}.focus\:border-pink-500:focus{--tw-border-opacity:1;border-color:rgb(236 72 153 / var(--tw-border-opacity, 1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}@media (min-width: 640px){.sm\:mb-8{margin-bottom:2rem}.sm\:block{display:block}.sm\:inline{display:inline}.sm\:h-60{height:15rem}.sm\:w-96{width:24rem}.sm\:w-auto{width:auto}.sm\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.sm\:flex-row{flex-direction:row}.sm\:gap-2{gap:0.5rem}.sm\:p-10{padding:2.5rem}.sm\:p-4{padding:1rem}.sm\:p-6{padding:1.5rem}.sm\:p-7{padding:1.75rem}.sm\:p-8{padding:2rem}.sm\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\:text-left{text-align:left}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-4xl{font-size:2.25rem;line-height:2.5rem}.sm\:text-5xl{font-size:3rem;line-height:1}.sm\:text-8xl{font-size:6rem;line-height:1}.sm\:text-base{font-size:1rem;line-height:1.5rem}.sm\:text-sm{font-size:0.875rem;line-height:1.25rem}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}}@media (min-width: 768px){.md\:inline-block{display:inline-block}.md\:inline{display:inline}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:col-span-5{grid-column:span 5 / span 5}.lg\:col-span-7{grid-column:span 7 / span 7}.lg\:grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}}</style></head>
-<body class="text-slate-800 flex flex-col justify-between min-h-screen selection:bg-pink-500 selection:text-white">
+</head>
+<body>
 
-  <!-- TOP NAVIGATION BAR -->
-  <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40 px-3 sm:px-6 py-2.5">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <!-- Brand / Home Button -->
-      <div class="flex items-center gap-2.5 cursor-pointer" onclick="app.confirmReturnHome()">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
-          🍼
+  <div class="container">
+    <header>
+      <h1>🍼 Baby Shower Price & Trivia</h1>
+      <p class="subtitle">Live Phone & TV Game</p>
+    </header>
+
+    <!-- SETUP / MAIN MENU -->
+    <div id="view-setup" class="view active">
+      <div class="grid-2">
+        <div class="round-card">
+          <h3>📺 Host TV Mode</h3>
+          <p class="round-desc">Display questions on the big screen and let guests join via QR code.</p>
+          <button class="btn btn-primary" onclick="createRoom()">Create New Game Room</button>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="font-display text-base sm:text-xl font-bold bg-gradient-to-r from-indigo-950 via-pink-600 to-amber-600 bg-clip-text text-transparent">
-              Baby Price Is Right &amp; Feud
-            </h1>
-            <span id="syncStatusBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Ready
-            </span>
+        <div class="round-card">
+          <h3>📱 Join as Player</h3>
+          <p class="round-desc">Enter the room code displayed on the TV screen to submit guesses.</p>
+          <div class="form-group">
+            <input type="text" id="input-room-code" placeholder="4-LETTER CODE" style="text-transform:uppercase;">
           </div>
-          <p class="text-[11px] text-slate-500 hidden sm:block">10 Baby Products &amp; Trivia Rounds • Phone QR or Paper Mode</p>
+          <div class="form-group">
+            <input type="text" id="input-player-name" placeholder="Your Name">
+          </div>
+          <button class="btn btn-accent" onclick="joinRoom()">Join Game</button>
         </div>
-      </div>
-
-      <!-- Right Action Buttons -->
-      <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-        <div id="navRoomPill" class="hidden items-center gap-1.5 bg-indigo-950 text-white px-3 py-1.5 rounded-xl text-xs font-bold">
-          <span class="text-indigo-300">ROOM:</span>
-          <span id="navRoomCode" class="font-mono text-amber-300 tracking-wider">BABY</span>
-        </div>
-
-        <button onclick="soundFX.toggleMute()" id="soundToggleBtn" class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition" title="Toggle Sound Effects">
-          🔊
-        </button>
-
-        <button onclick="app.openEditorModal()" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs transition flex items-center gap-1">
-          <span>⚙️</span>
-          <span class="hidden md:inline">Customize 10 Rounds</span>
-        </button>
-
-        <button onclick="app.downloadSingleFileHtml()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5">
-          <span>⬇️</span>
-          <span>Download index.html</span>
-        </button>
-
-        <button onclick="app.openDeployModal()" class="px-3 py-2 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-xs transition flex items-center gap-1">
-          <span>🚀</span>
-          <span class="hidden sm:inline">GitHub.io Guide</span>
-        </button>
       </div>
     </div>
-  </header>
 
-  <!-- MAIN STAGE AREA -->
-  <main class="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 flex flex-col justify-center">
+    <!-- HOST LOBBY -->
+    <div id="view-host-lobby" class="view">
+      <div class="lobby-box">
+        <h2>Scan QR Code to Join</h2>
+        <div id="qrcode"></div>
+        <p>Or visit this page and enter Room Code:</p>
+        <div class="room-code" id="display-room-code">----</div>
+      </div>
+      <div>
+        <h3>Joined Players (<span id="player-count">0</span>)</h3>
+        <ul id="host-player-list" class="player-list"></ul>
+      </div>
+      <br>
+      <button class="btn btn-primary" onclick="startGame()">Start Round 1 🚀</button>
+    </div>
 
-    <!-- ==========================================
-         VIEW 1: LANDING / ROLE SELECTION SCREEN
-         ========================================== -->
-    <section id="viewLanding" class="w-full max-w-4xl mx-auto my-auto py-2">
-      <div class="text-center mb-6 sm:mb-8">
-        <span class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white shadow-sm border border-pink-200 text-pink-600 text-xs font-bold uppercase tracking-wider mb-2.5">
-          ✨ 20–25 Minute Interactive Baby Shower Game
-        </span>
-        <h2 class="font-display text-3xl sm:text-5xl font-bold text-indigo-950 tracking-tight mb-2.5">
-          Come On Down to the Baby Shower!
-        </h2>
-        <p class="text-slate-600 max-w-2xl mx-auto text-sm sm:text-base">
-          Display 10 everyday baby products &amp; trivia questions on the TV or laptop screen. Guests submit their price or number guesses from their phones—or on paper! Closest guess wins a point.
-        </p>
+    <!-- HOST ROUND VIEW -->
+    <div id="view-host-round" class="view">
+      <div class="round-card">
+        <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="host-round-num">Round 1 of 10</p>
+        <h2 class="round-title" id="host-round-title">Loading...</h2>
+        <p class="round-desc" id="host-round-desc"></p>
+        <div id="host-reveal-price" class="reveal-price">$0.00</div>
+        <button class="btn btn-outline" id="btn-reveal" onclick="revealAnswer()">Reveal Real Price / Answer 🎯</button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <!-- HOST CARD -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 game-card border-2 border-indigo-100 flex flex-col justify-between">
-          <div>
-            <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-md mb-4">
-              📺
-            </div>
-            <span class="inline-block px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[11px] mb-1.5">
-              FOR THE TV / LAPTOP / PROJECTOR
-            </span>
-            <h3 class="font-display text-2xl font-bold text-slate-900 mb-2">
-              Host Presentation Screen
-            </h3>
-            <p class="text-slate-600 text-xs sm:text-sm mb-5 leading-relaxed">
-              Launch the main game show display with live QR code joining, 30-second countdown timer, dramatic price reveals, and support for both <strong>Phone Guests</strong> and <strong>Paper/Shouted Guesses</strong>.
-            </p>
-
-            <!-- Scoring Mode Selector -->
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 mb-6">
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-2">
-                🏆 Scoring Rule Mode:
-              </label>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="ruleClosestBtn" onclick="app.setScoringRule('closest')" class="py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-indigo-600 bg-indigo-50 text-indigo-900 transition">
-                  🎯 Closest Overall
-                </button>
-                <button type="button" id="ruleNoOverBtn" onclick="app.setScoringRule('no_over')" class="py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-transparent bg-white text-slate-600 hover:bg-slate-100 transition">
-                  🏷️ Without Going Over
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <button onclick="app.startHostSession()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-display font-bold text-lg btn-3d flex items-center justify-center gap-2">
-            <span>Launch TV Host Lobby</span>
-            <span>➔</span>
-          </button>
-        </div>
-
-        <!-- MOBILE PLAYER JOIN CARD -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 game-card border-2 border-pink-100 flex flex-col justify-between">
-          <div>
-            <div class="w-12 h-12 rounded-2xl bg-pink-500 text-white flex items-center justify-center text-2xl shadow-md mb-4">
-              📱
-            </div>
-            <span class="inline-block px-2.5 py-0.5 rounded-md bg-pink-50 text-pink-700 font-bold text-[11px] mb-1.5">
-              FOR GUESTS ON THEIR PHONES
-            </span>
-            <h3 class="font-display text-2xl font-bold text-slate-900 mb-2">
-              Join Live Game Room
-            </h3>
-            <p class="text-slate-600 text-xs sm:text-sm mb-4 leading-relaxed">
-              Playing from your seat? Enter the Room Code shown on the host's screen and your name to submit your price &amp; number guesses live!
-            </p>
-
-            <div class="space-y-3 mb-6">
-              <div>
-                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Room Code</label>
-                <input id="joinRoomCodeInput" type="text" maxlength="8" placeholder="e.g. BABY26" class="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-pink-500 focus:outline-none font-mono font-bold text-lg uppercase tracking-widest text-center bg-slate-50">
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Your Name or Team Name</label>
-                <input id="joinPlayerNameInput" type="text" maxlength="22" placeholder="e.g. Aunt Sarah" class="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-pink-500 focus:outline-none font-semibold text-sm bg-slate-50">
-              </div>
-            </div>
-          </div>
-
-          <button onclick="app.joinAsMobilePlayer()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-display font-bold text-lg btn-3d flex items-center justify-center gap-2">
-            <span>🎮 Join Game on Phone</span>
-          </button>
-        </div>
+      <div>
+        <h3>Player Guesses</h3>
+        <table class="guess-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Guess</th>
+              <th>Difference</th>
+            </tr>
+          </thead>
+          <tbody id="host-guess-tbody"></tbody>
+        </table>
       </div>
-    </section>
 
-    <!-- ==========================================
-         VIEW 2: TV HOST LOBBY SCREEN
-         ========================================== -->
-    <section id="viewHostLobby" class="hidden w-full">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <!-- Left 5 Cols: QR Code & Phone Setup -->
-        <div class="lg:col-span-5 bg-stage-gradient text-white rounded-3xl p-6 sm:p-7 game-card flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between gap-2 mb-3">
-              <span class="px-3 py-1 rounded-full bg-pink-500/20 border border-pink-400/40 text-pink-200 text-xs font-bold uppercase">
-                📱 Join via Phone
-              </span>
-              <span id="lobbyScoringBadge" class="px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold">
-                Closest Wins
-              </span>
-            </div>
-
-            <h2 class="font-display text-2xl sm:text-3xl font-bold mb-1">Scan to Play Along!</h2>
-            <p class="text-indigo-200 text-xs mb-4">
-              Point your phone camera at the QR code or open the link to join:
-            </p>
-
-            <!-- Sandbox / Blob Notice Banner -->
-            <div id="blobWarningBanner" class="hidden bg-amber-400/20 border border-amber-300/80 rounded-2xl p-3 mb-4 text-xs text-amber-100">
-              <div class="font-bold text-white mb-1">⚠️ Preview Sandbox Mode Detected (`blob:`)</div>
-              <p class="text-[11px] leading-relaxed mb-2">
-                External phones cannot open a temporary <code class="bg-black/30 px-1 rounded">blob:</code> preview link until you upload <code class="bg-black/30 px-1 rounded">index.html</code> to your <strong>github.io</strong> page.
-              </p>
-              <div class="flex flex-wrap gap-1.5">
-                <button onclick="app.openPhoneSimulator()" class="px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-[11px] transition">
-                  📱 Test Phone Simulator Here
-                </button>
-                <button onclick="app.openDeployModal()" class="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] transition">
-                  🚀 How to Host on GitHub.io
-                </button>
-              </div>
-            </div>
-
-            <!-- QR Code & Room Code Display Card -->
-            <div class="bg-white text-slate-900 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-xl mb-4">
-              <div id="qrCodeWrapper" class="bg-white p-2 rounded-xl border border-slate-200 shrink-0 flex items-center justify-center w-36 h-36">
-                <canvas id="qrCanvas" class="w-32 h-32"></canvas>
-                <img id="qrFallbackImg" class="hidden w-32 h-32 object-contain" alt="Join QR Code">
-              </div>
-
-              <div class="text-center sm:text-left flex-1 min-w-0 w-full">
-                <div class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">ROOM CODE</div>
-                <div id="lobbyRoomCodeDisplay" class="font-display text-3xl sm:text-4xl font-bold text-indigo-700 tracking-widest my-0.5">
-                  BABY26
-                </div>
-                <div id="lobbyJoinUrlText" class="text-[11px] text-slate-500 mb-2.5 break-all line-clamp-2"></div>
-                <div class="flex flex-wrap gap-1.5">
-                  <button onclick="app.copyJoinLink()" class="flex-1 py-1.5 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition">
-                    📋 Copy Link
-                  </button>
-                  <button onclick="app.openPhoneSimulator()" class="flex-1 py-1.5 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold text-xs transition">
-                    📱 Phone Sim
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Optional Public URL Override Input -->
-            <div class="bg-indigo-950/70 border border-indigo-700/70 rounded-2xl p-3">
-              <label class="block text-[11px] font-bold text-indigo-200 mb-1">
-                🌐 Your Public GitHub.io Link (Optional Override for QR):
-              </label>
-              <input id="customPublicUrlInput" type="url" placeholder="https://yourusername.github.io/baby-shower/" oninput="app.updateCustomPublicUrl(this.value)" class="w-full px-3 py-1.5 rounded-xl bg-indigo-900/80 border border-indigo-600 text-white placeholder-indigo-400 text-xs focus:outline-none focus:border-pink-400">
-            </div>
-          </div>
-
-          <div class="mt-4 bg-indigo-900/50 border border-indigo-700/50 rounded-xl p-3 text-[11px] text-indigo-200">
-            💡 <strong>Playing on Paper or Shouting Out?</strong> Add guest/team names on the right and type their guesses directly on the TV screen during each round!
-          </div>
-        </div>
-
-        <!-- Right 7 Cols: Guest List & Manual Entry -->
-        <div class="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-7 game-card border border-slate-200 flex flex-col justify-between">
-          <div>
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
-              <div>
-                <h3 class="font-display text-2xl font-bold text-slate-900 flex items-center gap-2">
-                  <span>Shower Guests Joined</span>
-                  <span id="lobbyPlayerCount" class="px-3 py-0.5 rounded-full bg-pink-100 text-pink-700 text-sm font-bold">0</span>
-                </h3>
-                <p class="text-xs text-slate-500">Guests scanning the QR code pop in automatically, or add guests manually below.</p>
-              </div>
-              <button onclick="app.addSamplePlayers()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
-                + Add 4 Sample Guests
-              </button>
-            </div>
-
-            <!-- Manual Player Form -->
-            <form onsubmit="event.preventDefault(); app.addManualPlayer();" class="flex gap-2 mb-5">
-              <input id="manualPlayerInput" type="text" maxlength="22" placeholder="Type guest or team name to add manually..." class="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none text-sm font-semibold">
-              <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shrink-0 transition">
-                + Add Guest
-              </button>
-            </form>
-
-            <!-- Players Grid -->
-            <div id="lobbyPlayersGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1"></div>
-          </div>
-
-          <div class="pt-5 mt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="text-xs text-slate-500 font-medium">
-              ⏱️ 10 Rounds Ready • Closest Guess Wins +1 Point
-            </div>
-            <button onclick="app.startRound(0)" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-display font-bold text-xl btn-3d">
-              Start Round 1! ▶
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 3: TV HOST ACTIVE ROUND & REVEAL
-         ========================================== -->
-    <section id="viewHostGame" class="hidden w-full">
-      <!-- Top Round Status Bar -->
-      <div class="bg-white rounded-2xl p-3 sm:p-4 mb-5 game-card border border-slate-200 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2.5">
-          <span id="hostRoundCounter" class="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-white font-display font-bold text-sm">
-            Round 1 / 10
-          </span>
-          <span id="hostCategoryBadge" class="px-3 py-1 rounded-xl bg-pink-100 text-pink-700 font-bold text-xs">
-            🏷️ The Price Is Right
-          </span>
-          <span id="hostRuleIndicator" class="hidden md:inline-block text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-            Closest Guess Wins (+1 Pt)
-          </span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button onclick="app.toggleTimer(30)" id="timerToggleBtn" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition">
-            ⏱️ <span id="timerDisplay">30s Timer</span>
-          </button>
-          <button onclick="app.openLeaderboardModal()" class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs transition">
-            🏆 Scoreboard
-          </button>
+      <div class="manual-entry">
+        <h4>Paper / Quick-Entry Mode</h4>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <input type="text" id="manual-name" placeholder="Player Name">
+          <input type="number" id="manual-guess" placeholder="Guess" step="0.01">
+          <button class="btn btn-accent" style="width: 120px;" onclick="addManualGuess()">Add</button>
         </div>
       </div>
 
-      <!-- Main Round Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <!-- Left 7 Cols: Item Showcase -->
-        <div class="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 game-card border-2 border-indigo-100 flex flex-col justify-between">
-          <div>
-            <div class="relative w-full h-48 sm:h-60 rounded-2xl bg-gradient-to-br from-indigo-50 via-pink-50 to-amber-50 border border-slate-200 flex flex-col items-center justify-center p-6 mb-5">
-              <div id="roundVisualContainer" class="text-center animate-float text-7xl sm:text-8xl select-none">
-                🧷
-              </div>
-              <div id="roundRetailerTag" class="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 text-slate-700 font-bold text-xs shadow-sm border border-slate-200">
-                2026 Retail
-              </div>
-            </div>
+      <br>
+      <button class="btn btn-primary" id="btn-next-round" onclick="nextRound()" style="display: none;">Next Item ➡️</button>
+    </div>
 
-            <div id="roundBrandBadge" class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 mb-1">
-              BRAND
-            </div>
-            <h2 id="roundTitle" class="font-display text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
-              Product Title
-            </h2>
-            <p id="roundDescription" class="text-slate-600 text-sm sm:text-base mb-6">
-              Prompt description
-            </p>
-          </div>
-
-          <!-- Mystery Price / Reveal Box -->
-          <div class="bg-stage-gradient text-white rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-            <div>
-              <div id="answerBoxLabel" class="text-xs font-bold uppercase tracking-wider text-indigo-300">
-                ACTUAL RETAIL PRICE
-              </div>
-              <div id="answerRevealValue" class="font-display text-3xl sm:text-5xl font-bold text-amber-300 tracking-tight mt-0.5">
-                $ ? ? . ? ?
-              </div>
-              <div id="answerFunFact" class="hidden text-xs text-indigo-200 mt-1"></div>
-            </div>
-
-            <div class="w-full sm:w-auto shrink-0">
-              <button id="btnRevealAnswer" onclick="app.revealRoundAnswer()" class="w-full sm:w-auto px-6 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-display font-bold text-lg btn-3d">
-                👁️ Reveal Answer &amp; Score!
-              </button>
-              <button id="btnNextRound" onclick="app.nextRound()" class="hidden w-full sm:w-auto px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-display font-bold text-lg btn-3d">
-                <span id="btnNextRoundText">Next Round ➔</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right 5 Cols: Live Guesses & Round Winner Board -->
-        <div class="lg:col-span-5 bg-white rounded-3xl p-6 game-card border border-slate-200 flex flex-col justify-between">
-          <!-- Collecting State -->
-          <div id="hostCollectingPanel" class="flex-1 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <div>
-                  <h3 class="font-display text-xl font-bold text-slate-900">Guest Guesses</h3>
-                  <p class="text-xs text-slate-500">Phone guesses lock in live; or type paper guesses below!</p>
-                </div>
-                <span id="lockedCountBadge" class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">
-                  0 / 0 Locked
-                </span>
-              </div>
-
-              <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200 mb-3 flex items-center justify-between text-xs">
-                <span class="font-semibold text-slate-600">⌨️ Host Quick-Entry Active</span>
-                <button onclick="app.promptAddPlayerMidGame()" class="text-indigo-600 font-bold hover:underline">+ Add Guest</button>
-              </div>
-
-              <div id="hostPlayerGuessesList" class="space-y-2 max-h-[340px] overflow-y-auto pr-1"></div>
-            </div>
-
-            <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-              <span>Room Code: <strong id="collectingRoomCode" class="text-slate-700 font-mono">BABY</strong></span>
-              <button onclick="app.openPhoneSimulator()" class="text-pink-600 font-bold hover:underline">📱 Open Phone Sim</button>
-            </div>
-          </div>
-
-          <!-- Revealed Results State -->
-          <div id="hostResultsPanel" class="hidden flex-1 flex flex-col justify-between">
-            <div>
-              <h3 class="font-display text-xl font-bold text-slate-900 mb-1">👑 Round Results</h3>
-              <p class="text-xs text-slate-500 mb-3">Sorted by closest guess to the actual answer</p>
-
-              <div id="roundWinnerBanner" class="bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 border-2 border-amber-300 rounded-2xl p-4 mb-4 text-center"></div>
-
-              <div id="roundSortedGuessesList" class="space-y-2 max-h-[290px] overflow-y-auto pr-1"></div>
-            </div>
-
-            <div class="pt-3 mt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-              <button onclick="app.openLeaderboardModal()" class="font-bold text-indigo-600 hover:underline">🏆 Full Standings</button>
-              <span class="text-emerald-600 font-bold">✓ +1 Pt Awarded</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 4: FINAL PODIUM SCREEN
-         ========================================== -->
-    <section id="viewFinalPodium" class="hidden w-full max-w-4xl mx-auto py-3">
-      <div class="bg-white rounded-3xl p-6 sm:p-10 game-card border-2 border-amber-200 text-center">
-        <div class="inline-block px-4 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-xs uppercase mb-2">
-          🏆 All 10 Rounds Complete!
-        </div>
-        <h2 class="font-display text-3xl sm:text-5xl font-bold text-indigo-950 mb-2">
-          Baby Shower Grand Champions!
-        </h2>
-        <p class="text-slate-500 text-sm mb-6">Final standings across all 10 everyday baby items &amp; trivia questions</p>
-
-        <div id="finalPodiumTop3" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end mb-8 max-w-2xl mx-auto"></div>
-
-        <div class="max-w-xl mx-auto bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6 text-left">
-          <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3">Complete Guest Scoreboard</h4>
-          <div id="finalFullScoreboard" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
-        </div>
-
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <button onclick="app.triggerTiebreakerModal()" class="px-5 py-3 rounded-2xl bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-display font-bold text-sm transition">
-            ⚡ Launch Instant Tiebreaker Question
-          </button>
-          <button onclick="app.resetGameScores()" class="px-6 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-display font-bold text-sm btn-3d">
-            🔄 Play Again / Reset Scores
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==========================================
-         VIEW 5: MOBILE GUEST CONTROLLER VIEW
-         ========================================== -->
-    <section id="viewMobileController" class="hidden w-full max-w-md mx-auto my-auto">
-      <div class="bg-white rounded-3xl p-6 game-card border-2 border-pink-200">
-        <!-- Mobile Player Top Header -->
-        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-          <div class="flex items-center gap-2.5">
-            <div id="mobileAvatarLetter" class="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-display font-bold flex items-center justify-center text-lg">
-              G
-            </div>
-            <div>
-              <div id="mobilePlayerNameDisplay" class="font-bold text-slate-900 text-sm">Guest</div>
-              <div class="text-[11px] text-slate-400">Room: <span id="mobileRoomCodeDisplay" class="font-mono font-bold text-slate-600">BABY</span></div>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-[10px] font-bold uppercase text-slate-400">YOUR SCORE</div>
-            <div id="mobilePlayerScoreDisplay" class="font-display text-xl font-bold text-indigo-600">0 pts</div>
-          </div>
-        </div>
-
-        <!-- Mobile State 1: Waiting in Lobby -->
-        <div id="mobileStateLobby" class="text-center py-8">
-          <div class="text-5xl mb-3 animate-bounce">🍼</div>
-          <h3 class="font-display text-2xl font-bold text-slate-900 mb-1">You're In the Game!</h3>
-          <p class="text-slate-500 text-xs sm:text-sm mb-4">Watch the host's screen. As soon as Round 1 starts, your number pad will appear right here!</p>
-          <span class="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">
-            ✓ Connected to Game Room
-          </span>
-        </div>
-
-        <!-- Mobile State 2: Active Round Guessing -->
-        <div id="mobileStateGuessing" class="hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span id="mobileRoundBadge" class="px-2.5 py-0.5 rounded-lg bg-indigo-950 text-white font-bold text-xs">Round 1 / 10</span>
-            <span id="mobileCategoryBadge" class="text-xs font-bold text-pink-600">The Price Is Right</span>
-          </div>
-
-          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-4 text-center">
-            <div id="mobileVisualIcon" class="text-4xl mb-1">🧷</div>
-            <div id="mobileBrandText" class="text-[10px] font-bold uppercase text-indigo-600">PAMPERS</div>
-            <h4 id="mobileItemTitle" class="font-display text-lg font-bold text-slate-900 leading-snug">Item Name</h4>
-            <p id="mobileItemPrompt" class="text-xs text-slate-500 mt-1">Enter your closest guess below!</p>
-          </div>
-
-          <form onsubmit="event.preventDefault(); app.submitMobileGuess();">
-            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5 text-center">
-              YOUR GUESS (NUMBERS ONLY)
-            </label>
-            <div class="relative mb-4">
-              <span id="mobileUnitPrefix" class="absolute left-4 top-1/2 -translate-y-1/2 font-display text-2xl font-bold text-slate-400">$</span>
-              <input id="mobileGuessInput" type="number" step="any" inputmode="decimal" required="" placeholder="0.00" class="w-full pl-10 pr-4 py-3.5 rounded-2xl border-2 border-indigo-200 focus:border-pink-500 focus:outline-none font-display text-3xl font-bold text-center text-slate-900 bg-white">
-            </div>
-
-            <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-display font-bold text-lg btn-3d">
-              🔒 Lock In My Guess!
-            </button>
-          </form>
-
-          <div id="mobileLockedConfirmation" class="hidden mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-center text-xs font-bold">
-            ✓ Guess locked in! You can update it until the host reveals the answer.
-          </div>
-        </div>
-
-        <!-- Mobile State 3: Revealed Answer Feedback -->
-        <div id="mobileStateRevealed" class="hidden text-center py-4">
-          <div class="text-4xl mb-2">🎉</div>
-          <div class="text-xs font-bold uppercase text-slate-400">ACTUAL ANSWER</div>
-          <div id="mobileRevealActual" class="font-display text-3xl font-bold text-indigo-950 mb-4">$44.99</div>
-
-          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-3">
-            <div class="text-xs text-slate-400 font-bold uppercase">Your Guess</div>
-            <div id="mobileRevealYourGuess" class="font-display text-xl font-bold text-slate-800">$40.00</div>
-            <div id="mobileRevealDiff" class="text-xs font-semibold text-pink-600 mt-0.5">Off by $4.99</div>
-          </div>
-          <p class="text-xs text-slate-400">Wait for the host to launch the next round...</p>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ==========================================
-       MODAL 1: CUSTOMIZE 10 ROUNDS EDITOR
-       ========================================== -->
-  <div id="modalEditor" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 game-card max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-        <div>
-          <h3 class="font-display text-2xl font-bold text-slate-900">⚙️ Customize 10 Baby Shower Rounds</h3>
-          <p class="text-xs text-slate-500">Edit any product, trivia question, or exact retail price.</p>
-        </div>
-        <button onclick="app.closeEditorModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+    <!-- PLAYER GAME VIEW -->
+    <div id="view-player-game" class="view">
+      <div class="round-card">
+        <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="player-round-num">Round 1</p>
+        <h2 class="round-title" id="player-round-title">Waiting for Host...</h2>
+        <p class="round-desc" id="player-round-desc"></p>
       </div>
 
-      <div id="editorQuestionsContainer" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+      <div id="player-input-box" class="form-group">
+        <label for="player-guess">Enter Your Number/Price Guess ($):</label>
+        <input type="number" id="player-guess" placeholder="e.g. 24.99" step="0.01">
+        <br><br>
+        <button class="btn btn-accent" id="btn-submit-guess" onclick="submitPlayerGuess()">Lock In Guess 🔒</button>
+      </div>
 
-      <div class="pt-4 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-        <button onclick="app.resetDefaultQuestions()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
-          Restore Default 10 Rounds
-        </button>
-        <div class="flex gap-2">
-          <button onclick="app.closeEditorModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">Cancel</button>
-          <button onclick="app.saveEditorChanges()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow">
-            Save All Changes
-          </button>
-        </div>
+      <div id="player-submitted-msg" style="display: none; text-align: center; padding: 1rem; background: #e0e7ff; border-radius: 8px; color: var(--primary); font-weight: bold;">
+        ✓ Guess Locked In! Watch the TV screen for the reveal.
       </div>
     </div>
   </div>
 
-  <!-- ==========================================
-       MODAL 2: SCOREBOARD STANDINGS
-       ========================================== -->
-  <div id="modalLeaderboard" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 game-card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-display text-2xl font-bold text-slate-900">🏆 Live Scoreboard</h3>
-        <button onclick="app.closeLeaderboardModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
-      </div>
-      <div id="modalLeaderboardList" class="space-y-2 max-h-80 overflow-y-auto pr-1 mb-4"></div>
-      <button onclick="app.closeLeaderboardModal()" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs">Close</button>
-    </div>
-  </div>
-
-  <!-- ==========================================
-       MODAL 3: INSTANT TIEBREAKER QUESTION
-       ========================================== -->
-  <div id="modalTiebreaker" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 game-card text-center">
-      <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-xs uppercase">⚡ Sudden Death Tiebreaker</span>
-      <h3 class="font-display text-2xl font-bold text-slate-900 mt-2 mb-2">
-        How many minutes are in a full 40-week pregnancy?
-      </h3>
-      <p class="text-xs text-slate-500 mb-5">Have the tied players write down or shout out their number guess! Closest wins!</p>
-
-      <div id="tiebreakerAnswerBox" class="hidden p-4 rounded-2xl bg-indigo-950 text-amber-300 font-display text-3xl font-bold mb-4">
-        403,200 Minutes!
-        <div class="text-xs text-indigo-200 font-sans font-normal mt-1">(280 days × 24 hours × 60 minutes)</div>
-      </div>
-
-      <div class="flex gap-2 justify-center">
-        <button onclick="document.getElementById('tiebreakerAnswerBox').classList.remove('hidden'); soundFX.playWin();" class="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs">
-          Reveal Exact Answer
-        </button>
-        <button onclick="document.getElementById('modalTiebreaker').classList.add('hidden'); document.getElementById('modalTiebreaker').classList.remove('flex');" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================
-       MODAL 4: GITHUB.IO HOSTING GUIDE
-       ========================================== -->
-  <div id="modalDeploy" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 game-card max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-display text-2xl font-bold text-slate-900">🚀 How to Host on Your Personal `github.io`</h3>
-        <button onclick="app.closeDeployModal()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
-      </div>
-
-      <div class="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
-        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <h4 class="font-bold text-emerald-950 text-sm">Step 1: Save This Game as `index.html`</h4>
-            <p class="text-xs text-emerald-800">Click the button to download this complete single-file web app.</p>
-          </div>
-          <button onclick="app.downloadSingleFileHtml()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 shadow">
-            ⬇️ Download index.html
-          </button>
-        </div>
-
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-          <h4 class="font-bold text-slate-900 text-sm">Step 2: Upload to GitHub Pages (2 Minutes, 100% Free)</h4>
-          <ol class="list-decimal list-inside space-y-1.5 text-xs">
-            <li>Log in to <strong>github.com</strong> and click the <strong>+ (New repository)</strong> icon in the top-right corner.</li>
-            <li>Name the repository <code class="bg-slate-200 px-1.5 py-0.5 rounded font-mono">baby-shower</code> (or <code class="bg-slate-200 px-1.5 py-0.5 rounded font-mono">yourusername.github.io</code>), set it to <strong>Public</strong>, and click <strong>Create repository</strong>.</li>
-            <li>On the next screen, click the link that says <strong>"uploading an existing file"</strong>.</li>
-            <li>Drag and drop your downloaded <code class="bg-slate-200 px-1.5 py-0.5 rounded font-mono">index.html</code> file into the box and click the green <strong>Commit changes</strong> button.</li>
-            <li>Click <strong>Settings</strong> (top tab) ➔ <strong>Pages</strong> (left sidebar). Under <strong>Branch</strong>, change <em>None</em> to <strong>main</strong> and click <strong>Save</strong>.</li>
-            <li>Wait ~60 seconds, then open <code class="bg-indigo-100 text-indigo-900 px-1.5 py-0.5 rounded font-mono">https://yourusername.github.io/baby-shower/</code> on your TV/laptop!</li>
-          </ol>
-        </div>
-
-        <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-950 text-xs flex items-center justify-between gap-3">
-          <span><strong>Want to test a guest phone right now inside this preview?</strong></span>
-          <button onclick="app.closeDeployModal(); app.openPhoneSimulator();" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0">
-            📱 Open Phone Simulator
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================
-       FLOATING INTERACTIVE PHONE SIMULATOR
-       ========================================== -->
-  <div id="modalPhoneSimulator" class="fixed bottom-4 right-4 z-50 hidden">
-    <div class="w-80 sm:w-96 bg-slate-900 rounded-[2.2rem] p-3 shadow-2xl border-4 border-slate-700 text-slate-800">
-      <div class="flex items-center justify-between px-3 py-1 text-white text-xs mb-2">
-        <span class="font-bold text-pink-400">📱 Guest Phone Simulator</span>
-        <button onclick="app.closePhoneSimulator()" class="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
-      </div>
-
-      <div class="bg-white rounded-[1.6rem] p-4 max-h-[70vh] overflow-y-auto">
-        <div id="simJoinScreen">
-          <div class="text-center mb-3">
-            <span class="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-bold text-[10px] uppercase">Simulated QR Scan</span>
-            <h4 class="font-display text-lg font-bold text-slate-900 mt-1">Join Room <span id="simRoomCodeLabel" class="text-indigo-600 font-mono">BABY</span></h4>
-            <p class="text-[11px] text-slate-500">Test what guests see on their phones while you control the TV screen behind this popup!</p>
-          </div>
-          <form onsubmit="event.preventDefault(); app.joinFromSimulator();" class="space-y-2">
-            <input id="simPlayerNameInput" type="text" maxlength="20" required="" placeholder="Guest name (e.g. Aunt Kelly)" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-pink-500 focus:outline-none text-xs font-bold">
-            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-display font-bold text-xs shadow">
-              Join Game on Simulated Phone
-            </button>
-          </form>
-        </div>
-
-        <div id="simActiveScreen" class="hidden">
-          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
-            <div>
-              <div id="simGuestNameTitle" class="font-bold text-xs text-slate-900">Guest</div>
-              <div class="text-[10px] text-emerald-600 font-semibold">✓ Synced to Host TV</div>
-            </div>
-            <span id="simGuestScoreBadge" class="px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-display font-bold text-xs">0 pts</span>
-          </div>
-
-          <div id="simLobbyWait" class="text-center py-5">
-            <div class="text-3xl mb-1 animate-bounce">🍼</div>
-            <div class="font-display font-bold text-sm text-slate-900">You're in the Lobby!</div>
-            <p class="text-[11px] text-slate-500 mt-1">Click <strong>"Start Round 1!"</strong> on the TV screen behind this phone.</p>
-          </div>
-
-          <div id="simRoundPad" class="hidden">
-            <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200 mb-2.5 text-center">
-              <div id="simRoundHeader" class="text-[10px] font-bold uppercase text-indigo-600">ROUND 1</div>
-              <div id="simRoundTitle" class="font-display font-bold text-xs text-slate-900">Item</div>
-            </div>
-            <form onsubmit="event.preventDefault(); app.submitSimulatorGuess();">
-              <div class="relative mb-2">
-                <span id="simUnitPrefix" class="absolute left-3 top-1/2 -translate-y-1/2 font-display text-base font-bold text-slate-400">$</span>
-                <input id="simGuessInput" type="number" step="any" inputmode="decimal" required="" placeholder="0.00" class="w-full pl-7 pr-3 py-2 rounded-xl border-2 border-indigo-200 focus:border-pink-500 focus:outline-none font-display text-lg font-bold text-center text-slate-900">
-              </div>
-              <button type="submit" class="w-full py-2 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-600 text-white font-display font-bold text-xs shadow">
-                🔒 Lock In Phone Guess
-              </button>
-            </form>
-            <div id="simLockedMsg" class="hidden mt-2 p-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-[11px] font-bold text-center">
-              ✓ Locked in on TV!
-            </div>
-          </div>
-
-          <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400">
-            <button onclick="app.switchSimGuest()" class="text-indigo-600 font-bold hover:underline">+ Simulate Another Guest</button>
-            <span>Live Sim</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST CONTAINER -->
-  <div id="toastContainer" class="fixed bottom-4 left-4 z-50 space-y-2 pointer-events-none"></div>
-
-  <!-- FOOTER -->
-  <footer class="w-full py-3 px-4 text-center text-xs text-slate-400">
-    Baby Shower: The Price Is Right &amp; Baby Trivia Feud • Single-File Web App Ready for GitHub Pages (`.io`)
-  </footer>
-
-  <!-- ==========================================
-       PURE VANILLA JS ENGINE (ZERO EXTERNAL FAILURES)
-       ========================================== -->
   <script>
-    // 1. WEB AUDIO SYNTHESIZER
-    const soundFX = {
-      muted: false,
-      ctx: null,
-      init() {
-        try {
-          if (!this.ctx) {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtx) this.ctx = new AudioCtx();
-          }
-          if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-        } catch (e) {}
-      },
-      toggleMute() {
-        this.muted = !this.muted;
-        const btn = document.getElementById('soundToggleBtn');
-        if (btn) btn.textContent = this.muted ? '🔇' : '🔊';
-        app.showToast(this.muted ? 'Sound effects muted' : 'Sound effects enabled!');
-      },
-      playTone(freq, type, duration, delay = 0, gainVal = 0.14) {
-        if (this.muted) return;
-        try {
-          this.init();
-          if (!this.ctx) return;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime + delay);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(this.ctx.currentTime + delay);
-          osc.stop(this.ctx.currentTime + delay + duration);
-        } catch (e) {}
-      },
-      playLockIn() {
-        this.playTone(587.33, 'sine', 0.12, 0, 0.12);
-        this.playTone(880, 'sine', 0.18, 0.08, 0.12);
-      },
-      playTick() {
-        this.playTone(800, 'triangle', 0.05, 0, 0.08);
-      },
-      playWin() {
-        const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
-        const times = [0, 0.11, 0.22, 0.33, 0.48, 0.62];
-        const durs  = [0.1, 0.1, 0.1, 0.13, 0.11, 0.35];
-        notes.forEach((n, i) => this.playTone(n, 'triangle', durs[i], times[i], 0.18));
-      },
-      playStartRound() {
-        this.playTone(440, 'sine', 0.14, 0, 0.14);
-        this.playTone(554.37, 'sine', 0.14, 0.11, 0.14);
-        this.playTone(659.25, 'sine', 0.22, 0.22, 0.14);
-      }
+    // Public Firebase Demo Config (Realtime Cloud Sync)
+    const firebaseConfig = {
+      databaseURL: "https://baby-shower-game-default-rtdb.firebaseio.com/"
     };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
 
-    // 2. PRE-LOADED 10 BABY SHOWER ROUNDS
-    const DEFAULT_ROUNDS = [
-      {
-        id: 1,
-        type: 'price',
-        brand: 'PAMPERS SWADDLERS',
-        title: 'Size 1 Newborn Diapers Super Pack (198 Count)',
-        prompt: 'What is the exact retail price of this 198-count box at Target?',
-        answer: 44.99,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '🧷',
-        retailer: 'Target 2026 Retail',
-        funFact: 'That comes out to about 23 cents per diaper!'
-      },
-      {
-        id: 2,
-        type: 'trivia',
-        brand: 'BABY FEUD TRIVIA #1',
-        title: 'First-Year Diaper Mountain!',
-        prompt: 'How many total diapers does an average baby go through in their first year of life?',
-        answer: 2700,
-        unitPrefix: '',
-        unitSuffix: ' diapers',
-        emoji: '👶',
-        retailer: 'Pediatric Estimate',
-        funFact: 'Newborns use 8–10 diapers a day, averaging ~2,700 in Year 1!'
-      },
-      {
-        id: 3,
-        type: 'price',
-        brand: 'FRIDA BABY',
-        title: 'NoseFrida The Snotsucker Nasal Aspirator Kit',
-        prompt: 'What is the retail price of this iconic pediatrician-recommended nasal aspirator with 24 hygiene filters?',
-        answer: 19.99,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '👃',
-        retailer: 'Babylist / Target',
-        funFact: 'A registry cult-classic that every new parent swears by!'
-      },
-      {
-        id: 4,
-        type: 'price',
-        brand: 'DESITIN MAXIMUM STRENGTH',
-        title: 'Baby Diaper Rash Paste Jar (16 oz Family Tub)',
-        prompt: 'What is the retail price for a full 1-pound (16 oz) tub of Desitin Maximum Strength paste?',
-        answer: 16.49,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '🧴',
-        retailer: 'Target 2026 Retail',
-        funFact: 'Contains 40% zinc oxide and lasts for months!'
-      },
-      {
-        id: 5,
-        type: 'trivia',
-        brand: 'BABY FEUD TRIVIA #2',
-        title: 'Sleepless Nights Counter',
-        prompt: 'According to sleep studies, how many total hours of sleep does a new parent lose in baby’s first 12 months?',
-        answer: 700,
-        unitPrefix: '',
-        unitSuffix: ' hours',
-        emoji: '😴',
-        retailer: 'Parenting Survey',
-        funFact: 'Losing about 2 hours of sleep a night adds up to ~700 hours in the first year!'
-      },
-      {
-        id: 6,
-        type: 'price',
-        brand: 'PLAYTEX DIAPER GENIE',
-        title: 'Complete Diaper Pail with Odor Lock & 1 Refill',
-        prompt: 'What is the retail price of a brand-new Diaper Genie Complete Pail with antimicrobial odor lock?',
-        answer: 54.99,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '🗑️',
-        retailer: 'Target / Amazon',
-        funFact: 'Holds up to 270 newborn diapers before needing a bag change!'
-      },
-      {
-        id: 7,
-        type: 'trivia',
-        brand: 'BABY FEUD TRIVIA #3',
-        title: 'Tiny Newborn Weight in Ounces',
-        prompt: 'What is the average birth weight of a full-term newborn baby measured in OUNCES? (Hint: 1 lb = 16 oz)',
-        answer: 120,
-        unitPrefix: '',
-        unitSuffix: ' oz',
-        emoji: '⚖️',
-        retailer: 'CDC Birth Stat',
-        funFact: '7.5 pounds equals exactly 120 ounces!'
-      },
-      {
-        id: 8,
-        type: 'price',
-        brand: 'GERBER 1ST FOODS',
-        title: 'Organic Banana Baby Food Puree (2-Pack Tubs)',
-        prompt: 'How much does a standard 2-pack of Gerber 1st Foods Banana Puree tubs cost at the grocery store?',
-        answer: 1.89,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '🍌',
-        retailer: 'Grocery Retail',
-        funFact: 'One of the most budget-friendly items in the baby aisle!'
-      },
-      {
-        id: 9,
-        type: 'trivia',
-        brand: 'BABY FEUD TRIVIA #4',
-        title: 'Growing Bones Mystery',
-        prompt: 'Adults have 206 bones. How many bones is a human baby born with?',
-        answer: 300,
-        unitPrefix: '',
-        unitSuffix: ' bones',
-        emoji: '🦴',
-        retailer: 'Anatomy Fact',
-        funFact: 'Babies are born with ~300 bones—many fuse together as they grow!'
-      },
-      {
-        id: 10,
-        type: 'price',
-        brand: 'BABY BREZZA SHOWCASE FINALE',
-        title: 'Formula Pro Advanced WiFi Baby Formula Dispenser',
-        prompt: 'Grand Finale! What is the retail price of the "Keurig for Baby Formula" that mixes warm bottles in seconds?',
-        answer: 229.99,
-        unitPrefix: '$',
-        unitSuffix: '',
-        emoji: '🍼',
-        retailer: 'Babylist Finale',
-        funFact: 'Automatically mixes, heats, and dispenses formula at 3 AM!'
-      }
+    // 10 Game Items & Answers
+    const gameRounds = [
+      { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price", value: 55.99 },
+      { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price", value: 15.99 },
+      { title: "Desitin Maximum Strength Diaper Rash Paste (16 oz)", desc: "Retail Price for the large tub", value: 18.99 },
+      { title: "Diaper Genie Complete Refill 3-Pack", desc: "Retail Price", value: 21.99 },
+      { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price", value: 1.79 },
+      { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price", value: 199.99 },
+      { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500 },
+      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700 },
+      { title: "Trivia: Average Daily Feedings for a Newborn", desc: "How many total feedings occur in a 24-hour period?", value: 10 },
+      { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000 }
     ];
 
-    // 3. MAIN APPLICATION CONTROLLER
-    const app = {
-      role: 'landing',
-      roomCode: 'BABY26',
-      scoringRule: 'closest',
-      currentRoundIndex: 0,
-      roundStatus: 'lobby',
-      rounds: JSON.parse(JSON.stringify(DEFAULT_ROUNDS)),
-      players: {},
-      mobilePlayerId: null,
-      mobilePlayerName: '',
-      simPlayerId: null,
-      simPlayerName: '',
-      customPublicUrl: '',
-      timerInterval: null,
-      timerSeconds: 0,
-      localChannel: null,
-      peer: null,
-      peerConnections: [],
-      hostPeerConn: null,
-
-      init() {
-        try {
-          if ('BroadcastChannel' in window) {
-            this.localChannel = new BroadcastChannel('baby_shower_pir_sync');
-            this.localChannel.onmessage = (ev) => {
-              if (ev.data && ev.data.roomCode === this.roomCode) {
-                this.handleIncomingRoomState(ev.data.state);
-              }
-            };
-          }
-        } catch (e) {}
-
-        // Auto-fill Room Code if guest scanned QR code (?room=XXXX)
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const urlRoom = params.get('room');
-          if (urlRoom) {
-            const roomInput = document.getElementById('joinRoomCodeInput');
-            if (roomInput) roomInput.value = urlRoom.toUpperCase();
-            const nameInput = document.getElementById('joinPlayerNameInput');
-            if (nameInput) setTimeout(() => nameInput.focus(), 250);
-          }
-        } catch (e) {}
-      },
-
-      isSandboxOrBlobUrl() {
-        const href = window.location.href || '';
-        return (
-          href.startsWith('blob:') ||
-          href.startsWith('data:') ||
-          href.startsWith('file:') ||
-          href.includes('scf.usercontent.goog') ||
-          href.includes('googleusercontent.com')
-        );
-      },
-
-      getEffectiveBaseUrl() {
-        if (this.customPublicUrl && this.customPublicUrl.trim().startsWith('http')) {
-          return this.customPublicUrl.trim().split('?')[0];
-        }
-        return window.location.href.split('?')[0];
-      },
-
-      generateRoomCode() {
-        const words = ['BABY', 'CRIB', 'MILK', 'BINK', 'CUTE', 'DUCK', 'STAR', 'LOVE'];
-        const w = words[Math.floor(Math.random() * words.length)];
-        const n = Math.floor(10 + Math.random() * 89);
-        return w + n;
-      },
-
-      setScoringRule(rule) {
-        this.scoringRule = rule;
-        const btnClosest = document.getElementById('ruleClosestBtn');
-        const btnNoOver = document.getElementById('ruleNoOverBtn');
-        if (rule === 'closest') {
-          btnClosest.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-indigo-600 bg-indigo-50 text-indigo-900 transition';
-          btnNoOver.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-transparent bg-white text-slate-600 hover:bg-slate-100 transition';
-        } else {
-          btnNoOver.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-pink-600 bg-pink-50 text-pink-900 transition';
-          btnClosest.className = 'py-2.5 px-3 rounded-xl text-xs font-bold border-2 border-transparent bg-white text-slate-600 hover:bg-slate-100 transition';
-        }
-      },
-
-      buildStatePayload() {
-        return {
-          roomCode: this.roomCode,
-          scoringRule: this.scoringRule,
-          currentRoundIndex: this.currentRoundIndex,
-          roundStatus: this.roundStatus,
-          roundsJson: JSON.stringify(this.rounds),
-          playersJson: JSON.stringify(this.players),
-          updatedAt: Date.now()
-        };
-      },
-
-      initHostPeerJS(roomCode) {
-        if (typeof Peer === 'undefined') return;
-        try {
-          if (this.peer) this.peer.destroy();
-          const peerId = 'baby-feud-' + roomCode.toLowerCase();
-          this.peer = new Peer(peerId);
-          this.peerConnections = [];
-
-          this.peer.on('open', () => {
-            const badge = document.getElementById('syncStatusBadge');
-            if (badge) badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Phone Sync Active';
-          });
-
-          this.peer.on('connection', (conn) => {
-            this.peerConnections.push(conn);
-            conn.on('open', () => {
-              conn.send({ type: 'STATE_SYNC', state: this.buildStatePayload() });
-            });
-            conn.on('data', (msg) => {
-              if (msg && msg.type === 'PLAYER_UPDATE' && msg.player) {
-                const p = msg.player;
-                const existing = this.players[p.id] || {};
-                this.players[p.id] = {
-                  ...existing,
-                  ...p,
-                  score: existing.score !== undefined ? existing.score : (p.score || 0),
-                  guesses: { ...(existing.guesses || {}), ...(p.guesses || {}) }
-                };
-                if (this.roundStatus === 'lobby') this.renderHostLobbyPlayers();
-                else if (this.roundStatus === 'guessing') this.renderHostGuessingList();
-                this.renderSimulatorState();
-                this.pushRoomState();
-              }
-            });
-          });
-        } catch (e) {}
-      },
-
-      initPlayerPeerJS(roomCode) {
-        if (typeof Peer === 'undefined') return;
-        try {
-          if (this.peer) this.peer.destroy();
-          this.peer = new Peer();
-          this.peer.on('open', () => {
-            const hostId = 'baby-feud-' + roomCode.toLowerCase();
-            const conn = this.peer.connect(hostId, { reliable: true });
-            this.hostPeerConn = conn;
-            conn.on('open', () => {
-              if (this.mobilePlayerId && this.players[this.mobilePlayerId]) {
-                conn.send({ type: 'PLAYER_UPDATE', player: this.players[this.mobilePlayerId] });
-              }
-            });
-            conn.on('data', (msg) => {
-              if (msg && msg.type === 'STATE_SYNC' && msg.state) {
-                this.handleIncomingRoomState(msg.state);
-              }
-            });
-          });
-        } catch (e) {}
-      },
-
-      pushRoomState() {
-        const payload = this.buildStatePayload();
-        try {
-          if (this.localChannel) {
-            this.localChannel.postMessage({ roomCode: this.roomCode, state: payload });
-          }
-        } catch (e) {}
-
-        if (this.role === 'host' && this.peerConnections.length > 0) {
-          this.peerConnections.forEach(c => {
-            if (c && c.open) {
-              try { c.send({ type: 'STATE_SYNC', state: payload }); } catch (e) {}
-            }
-          });
-        } else if (this.role === 'player' && this.hostPeerConn && this.hostPeerConn.open) {
-          const me = this.players[this.mobilePlayerId];
-          if (me) {
-            try { this.hostPeerConn.send({ type: 'PLAYER_UPDATE', player: me }); } catch (e) {}
-          }
-        }
-        this.renderSimulatorState();
-      },
-
-      handleIncomingRoomState(data) {
-        if (!data) return;
-        this.scoringRule = data.scoringRule || 'closest';
-        this.currentRoundIndex = typeof data.currentRoundIndex === 'number' ? data.currentRoundIndex : 0;
-        this.roundStatus = data.roundStatus || 'lobby';
-        if (data.roundsJson) {
-          try { this.rounds = JSON.parse(data.roundsJson); } catch (e) {}
-        }
-        if (data.playersJson) {
-          try { this.players = JSON.parse(data.playersJson); } catch (e) {}
-        }
-
-        if (this.role === 'host') {
-          if (this.roundStatus === 'lobby') this.renderHostLobbyPlayers();
-          else if (this.roundStatus === 'guessing') this.renderHostGuessingList();
-        } else if (this.role === 'player') {
-          this.renderMobileView();
-        }
-      },
-
-      startHostSession() {
-        soundFX.init();
-        this.role = 'host';
-        this.roomCode = this.generateRoomCode();
-        this.roundStatus = 'lobby';
-        this.currentRoundIndex = 0;
-
-        const pill = document.getElementById('navRoomPill');
-        pill.classList.remove('hidden');
-        pill.classList.add('flex');
-        document.getElementById('navRoomCode').textContent = this.roomCode;
-        document.getElementById('lobbyRoomCodeDisplay').textContent = this.roomCode;
-        document.getElementById('collectingRoomCode').textContent = this.roomCode;
-
-        const ruleText = this.scoringRule === 'closest' ? 'Closest Guess Wins' : 'Closest Without Going Over';
-        document.getElementById('lobbyScoringBadge').textContent = ruleText;
-        document.getElementById('hostRuleIndicator').textContent = ruleText + ' (+1 Pt)';
-
-        this.switchView('viewHostLobby');
-        this.generateLobbyQRCode();
-        this.renderHostLobbyPlayers();
-        this.initHostPeerJS(this.roomCode);
-        this.pushRoomState();
-      },
-
-      updateCustomPublicUrl(val) {
-        this.customPublicUrl = (val || '').trim();
-        this.generateLobbyQRCode();
-      },
-
-      generateLobbyQRCode() {
-        const isBlob = this.isSandboxOrBlobUrl() && !this.customPublicUrl;
-        const warnBanner = document.getElementById('blobWarningBanner');
-        if (warnBanner) {
-          if (isBlob) warnBanner.classList.remove('hidden');
-          else warnBanner.classList.add('hidden');
-        }
-
-        const baseUrl = this.getEffectiveBaseUrl();
-        const joinUrl = baseUrl + '?room=' + this.roomCode;
-        document.getElementById('lobbyJoinUrlText').textContent = isBlob
-          ? 'Preview Mode — Enter your github.io link below or host index.html to scan with real phones'
-          : joinUrl;
-
-        const canvas = document.getElementById('qrCanvas');
-        const fallbackImg = document.getElementById('qrFallbackImg');
-        if (typeof QRious !== 'undefined' && canvas) {
-          try {
-            canvas.classList.remove('hidden');
-            if (fallbackImg) fallbackImg.classList.add('hidden');
-            new QRious({
-              element: canvas,
-              value: joinUrl,
-              size: 140,
-              background: '#ffffff',
-              foreground: '#1e1b4b',
-              level: 'M'
-            });
-            return;
-          } catch (e) {}
-        }
-        // Fallback QR image if QRious is still loading
-        if (fallbackImg && canvas) {
-          canvas.classList.add('hidden');
-          fallbackImg.classList.remove('hidden');
-          fallbackImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(joinUrl);
-        }
-      },
-
-      copyJoinLink() {
-        const joinUrl = this.getEffectiveBaseUrl() + '?room=' + this.roomCode;
-        const temp = document.createElement('textarea');
-        temp.value = joinUrl;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-        this.showToast('Room join link copied!');
-      },
-
-      addManualPlayer(nameOverride = null) {
-        const input = document.getElementById('manualPlayerInput');
-        const name = (nameOverride || (input ? input.value : '')).trim();
-        if (!name) return;
-
-        const id = 'guest_' + Date.now() + '_' + Math.floor(Math.random() * 999);
-        this.players[id] = { id, name, score: 0, isManual: true, guesses: {} };
-        if (input && !nameOverride) input.value = '';
-        soundFX.playLockIn();
-        this.renderHostLobbyPlayers();
-        this.pushRoomState();
-      },
-
-      addSamplePlayers() {
-        ['Grandma Rose', 'Aunt Sarah', 'Cousin Mia', 'Team Blue'].forEach((n, i) => {
-          const id = 'sample_' + i + '_' + Date.now();
-          this.players[id] = { id, name: n, score: 0, isManual: true, guesses: {} };
-        });
-        soundFX.playLockIn();
-        this.renderHostLobbyPlayers();
-        this.pushRoomState();
-        this.showToast('Added 4 sample guests!');
-      },
-
-      removePlayer(id) {
-        delete this.players[id];
-        this.renderHostLobbyPlayers();
-        this.pushRoomState();
-      },
-
-      renderHostLobbyPlayers() {
-        const grid = document.getElementById('lobbyPlayersGrid');
-        const countEl = document.getElementById('lobbyPlayerCount');
-        const list = Object.values(this.players);
-        if (countEl) countEl.textContent = list.length;
-        if (!grid) return;
-
-        if (list.length === 0) {
-          grid.innerHTML = `
-            <div class="col-span-full py-8 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl text-xs font-semibold">
-              Waiting for guests to scan the QR code or add names above...
-            </div>
-          `;
-          return;
-        }
-
-        grid.innerHTML = list.map(p => `
-          <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-            <div class="flex items-center gap-2 truncate">
-              <span class="text-sm">${p.isManual ? '📝' : '📱'}</span>
-              <span class="font-bold text-xs text-slate-800 truncate">${this.escapeHtml(p.name)}</span>
-            </div>
-            <button onclick="app.removePlayer('${p.id}')" class="text-slate-400 hover:text-rose-500 text-xs font-bold ml-1">✕</button>
-          </div>
-        `).join('');
-      },
-
-      startRound(index) {
-        if (Object.keys(this.players).length === 0) {
-          this.addManualPlayer('Team Pink');
-          this.addManualPlayer('Team Blue');
-        }
-        this.stopTimer();
-        this.currentRoundIndex = index;
-        this.roundStatus = 'guessing';
-        soundFX.playStartRound();
-
-        this.switchView('viewHostGame');
-        this.renderHostRoundStage();
-        this.pushRoomState();
-      },
-
-      renderHostRoundStage() {
-        const round = this.rounds[this.currentRoundIndex];
-        if (!round) return;
-
-        document.getElementById('hostRoundCounter').textContent = `Round ${this.currentRoundIndex + 1} / ${this.rounds.length}`;
-        const catBadge = document.getElementById('hostCategoryBadge');
-        if (round.type === 'price') {
-          catBadge.className = 'px-3 py-1 rounded-xl bg-pink-100 text-pink-700 font-bold text-xs';
-          catBadge.textContent = '🏷️ The Price Is Right';
-          document.getElementById('answerBoxLabel').textContent = 'ACTUAL RETAIL PRICE';
-          document.getElementById('answerRevealValue').textContent = '$ ? ? . ? ?';
-        } else {
-          catBadge.className = 'px-3 py-1 rounded-xl bg-indigo-100 text-indigo-700 font-bold text-xs';
-          catBadge.textContent = '🔢 Baby Feud Trivia';
-          document.getElementById('answerBoxLabel').textContent = 'ACTUAL NUMBER ANSWER';
-          document.getElementById('answerRevealValue').textContent = '? , ? ? ?';
-        }
-
-        document.getElementById('roundVisualContainer').textContent = round.emoji || '🍼';
-        document.getElementById('roundRetailerTag').textContent = round.retailer || '2026 Official Stat';
-        document.getElementById('roundBrandBadge').textContent = round.brand;
-        document.getElementById('roundTitle').textContent = round.title;
-        document.getElementById('roundDescription').textContent = round.prompt;
-
-        document.getElementById('answerFunFact').classList.add('hidden');
-        document.getElementById('btnRevealAnswer').classList.remove('hidden');
-        document.getElementById('btnNextRound').classList.add('hidden');
-
-        document.getElementById('hostCollectingPanel').classList.remove('hidden');
-        document.getElementById('hostResultsPanel').classList.add('hidden');
-
-        this.renderHostGuessingList();
-      },
-
-      renderHostGuessingList() {
-        const listEl = document.getElementById('hostPlayerGuessesList');
-        const badgeEl = document.getElementById('lockedCountBadge');
-        const round = this.rounds[this.currentRoundIndex];
-        const playersArr = Object.values(this.players);
-
-        let locked = 0;
-        playersArr.forEach(p => {
-          if (p.guesses && p.guesses[this.currentRoundIndex] !== undefined && p.guesses[this.currentRoundIndex] !== '') {
-            locked++;
-          }
-        });
-        if (badgeEl) badgeEl.textContent = `${locked} / ${playersArr.length} Locked`;
-
-        listEl.innerHTML = playersArr.map(p => {
-          const val = (p.guesses && p.guesses[this.currentRoundIndex] !== undefined) ? p.guesses[this.currentRoundIndex] : '';
-          const hasGuess = val !== '';
-          return `
-            <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl border ${hasGuess ? 'bg-emerald-50/70 border-emerald-200' : 'bg-white border-slate-200'}">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="text-sm">${hasGuess ? '✅' : '⏳'}</span>
-                <div class="truncate">
-                  <div class="font-bold text-xs text-slate-800 truncate">${this.escapeHtml(p.name)}</div>
-                  <div class="text-[10px] text-slate-400">Score: ${p.score || 0} pts</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                ${p.isManual ? `
-                  <div class="relative w-28">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">${round.unitPrefix || ''}</span>
-                    <input type="number" step="any" placeholder="Guess..." value="${val}"
-                      onchange="app.updateHostManualGuess('${p.id}', this.value)"
-                      class="w-full pl-5 pr-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-right bg-white" />
-                  </div>
-                ` : `
-                  <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${hasGuess ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-400'}">
-                    ${hasGuess ? 'Locked In 🔒' : 'Guessing...'}
-                  </span>
-                `}
-              </div>
-            </div>
-          `;
-        }).join('');
-      },
-
-      updateHostManualGuess(playerId, rawVal) {
-        if (!this.players[playerId]) return;
-        if (!this.players[playerId].guesses) this.players[playerId].guesses = {};
-        if (rawVal === '' || isNaN(Number(rawVal))) {
-          delete this.players[playerId].guesses[this.currentRoundIndex];
-        } else {
-          this.players[playerId].guesses[this.currentRoundIndex] = parseFloat(rawVal);
-          soundFX.playLockIn();
-        }
-        this.renderHostGuessingList();
-        this.pushRoomState();
-      },
-
-      promptAddPlayerMidGame() {
-        const name = 'Guest ' + (Object.keys(this.players).length + 1);
-        this.addManualPlayer(name);
-        this.renderHostGuessingList();
-      },
-
-      formatUnitValue(val, round) {
-        if (val === undefined || val === null || isNaN(val)) return 'No Guess';
-        const num = Number(val);
-        if (round.unitPrefix === '$') return '$' + num.toFixed(2);
-        return num.toLocaleString() + (round.unitSuffix || '');
-      },
-
-      revealRoundAnswer() {
-        this.stopTimer();
-        this.roundStatus = 'revealed';
-        const round = this.rounds[this.currentRoundIndex];
-        const actual = Number(round.answer);
-
-        document.getElementById('answerRevealValue').textContent = this.formatUnitValue(actual, round);
-        const funFactEl = document.getElementById('answerFunFact');
-        if (round.funFact) {
-          funFactEl.textContent = round.funFact;
-          funFactEl.classList.remove('hidden');
-        }
-
-        const evaluated = Object.values(this.players).map(p => {
-          const g = p.guesses ? p.guesses[this.currentRoundIndex] : undefined;
-          const hasGuess = g !== undefined && g !== '' && !isNaN(Number(g));
-          const numGuess = hasGuess ? Number(g) : null;
-          const diff = hasGuess ? Math.abs(numGuess - actual) : Infinity;
-          const isOver = hasGuess && numGuess > actual;
-          return { player: p, guess: numGuess, hasGuess, diff, isOver, isWinner: false };
-        });
-
-        let minDiff = Infinity;
-        if (this.scoringRule === 'no_over') {
-          const under = evaluated.filter(e => e.hasGuess && !e.isOver);
-          if (under.length > 0) minDiff = Math.min(...under.map(e => e.diff));
-          else {
-            const anyG = evaluated.filter(e => e.hasGuess);
-            if (anyG.length > 0) minDiff = Math.min(...anyG.map(e => e.diff));
-          }
-        } else {
-          const anyG = evaluated.filter(e => e.hasGuess);
-          if (anyG.length > 0) minDiff = Math.min(...anyG.map(e => e.diff));
-        }
-
-        const winners = [];
-        evaluated.forEach(item => {
-          if (!item.hasGuess || minDiff === Infinity) return;
-          if (this.scoringRule === 'no_over') {
-            const anyUnder = evaluated.some(e => e.hasGuess && !e.isOver);
-            if (anyUnder && item.isOver) return;
-          }
-          if (Math.abs(item.diff - minDiff) < 0.0001) {
-            item.isWinner = true;
-            item.player.score = (item.player.score || 0) + 1;
-            winners.push(item);
-          }
-        });
-
-        evaluated.sort((a, b) => {
-          if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
-          return a.diff - b.diff;
-        });
-
-        const banner = document.getElementById('roundWinnerBanner');
-        if (winners.length > 0) {
-          const names = winners.map(w => this.escapeHtml(w.player.name)).join(' & ');
-          banner.innerHTML = `
-            <div class="text-[11px] font-extrabold uppercase text-amber-800">🏆 CLOSEST GUESS WINNER (+1 PT)</div>
-            <div class="font-display text-2xl font-bold text-slate-900">${names}</div>
-            <div class="text-xs text-slate-600">Guessed <strong>${this.formatUnitValue(winners[0].guess, round)}</strong> (Off by ${this.formatUnitValue(minDiff, round)})</div>
-          `;
-        } else {
-          banner.innerHTML = `<div class="text-xs font-bold text-slate-600">No guesses submitted this round!</div>`;
-        }
-
-        document.getElementById('roundSortedGuessesList').innerHTML = evaluated.map((item, idx) => `
-          <div class="flex items-center justify-between p-2.5 rounded-xl border ${item.isWinner ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'}">
-            <div class="flex items-center gap-2">
-              <span class="w-6 h-6 rounded-full ${item.isWinner ? 'bg-amber-400 text-slate-950' : 'bg-slate-200 text-slate-600'} font-bold text-xs flex items-center justify-center">
-                ${item.isWinner ? '👑' : idx + 1}
-              </span>
-              <div>
-                <div class="font-bold text-xs text-slate-900">${this.escapeHtml(item.player.name)} ${item.isWinner ? '<span class="text-emerald-700 font-extrabold">+1 PT</span>' : ''}</div>
-                <div class="text-[10px] text-slate-500">Total: ${item.player.score || 0} pts</div>
-              </div>
-            </div>
-            <div class="text-right">
-              <div class="font-display font-bold text-sm text-slate-900">${item.hasGuess ? this.formatUnitValue(item.guess, round) : '—'}</div>
-              <div class="text-[10px] text-slate-400">${item.hasGuess ? 'Off by ' + this.formatUnitValue(item.diff, round) : 'No guess'}</div>
-            </div>
-          </div>
-        `).join('');
-
-        document.getElementById('hostCollectingPanel').classList.add('hidden');
-        document.getElementById('hostResultsPanel').classList.remove('hidden');
-        document.getElementById('btnRevealAnswer').classList.add('hidden');
-
-        const nextBtn = document.getElementById('btnNextRound');
-        nextBtn.classList.remove('hidden');
-        document.getElementById('btnNextRoundText').textContent = (this.currentRoundIndex + 1 < this.rounds.length)
-          ? `Start Round ${this.currentRoundIndex + 2} ➔`
-          : 'View Final Podium! 🏆';
-
-        soundFX.playWin();
-        if (typeof confetti === 'function') {
-          try { confetti({ particleCount: 65, spread: 60, origin: { y: 0.6 } }); } catch (e) {}
-        }
-        this.pushRoomState();
-      },
-
-      nextRound() {
-        if (this.currentRoundIndex + 1 < this.rounds.length) {
-          this.startRound(this.currentRoundIndex + 1);
-        } else {
-          this.showFinalPodium();
-        }
-      },
-
-      showFinalPodium() {
-        this.roundStatus = 'finished';
-        this.switchView('viewFinalPodium');
-        soundFX.playWin();
-        if (typeof confetti === 'function') {
-          try { confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } }); } catch (e) {}
-        }
-
-        const sorted = Object.values(this.players).sort((a, b) => (b.score || 0) - (a.score || 0));
-        const medals = ['1st Place 🏆', '2nd Place 🥈', '3rd Place 🥉'];
-        document.getElementById('finalPodiumTop3').innerHTML = sorted.slice(0, 3).map((p, i) => `
-          <div class="rounded-2xl p-5 border-2 ${i === 0 ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'} shadow-sm">
-            <div class="text-xs font-extrabold uppercase text-slate-500 mb-1">${medals[i]}</div>
-            <div class="font-display text-xl font-bold text-slate-900 truncate">${this.escapeHtml(p.name)}</div>
-            <div class="font-display text-3xl font-bold text-indigo-600">${p.score || 0} pts</div>
-          </div>
-        `).join('');
-
-        document.getElementById('finalFullScoreboard').innerHTML = sorted.map((p, i) => `
-          <div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-white border border-slate-200">
-            <span class="font-bold text-xs text-slate-800">${i + 1}. ${this.escapeHtml(p.name)}</span>
-            <span class="font-display font-bold text-sm text-indigo-600">${p.score || 0} pts</span>
-          </div>
-        `).join('');
-
-        this.pushRoomState();
-      },
-
-      resetGameScores() {
-        Object.values(this.players).forEach(p => { p.score = 0; p.guesses = {}; });
-        this.startRound(0);
-      },
-
-      toggleTimer(sec = 30) {
-        if (this.timerInterval) {
-          this.stopTimer();
-          return;
-        }
-        this.timerSeconds = sec;
-        const disp = document.getElementById('timerDisplay');
-        disp.textContent = this.timerSeconds + 's';
-        this.timerInterval = setInterval(() => {
-          this.timerSeconds--;
-          if (this.timerSeconds > 0) {
-            disp.textContent = this.timerSeconds + 's';
-            if (this.timerSeconds <= 5) soundFX.playTick();
-          } else {
-            this.stopTimer();
-            disp.textContent = "Time's Up!";
-            soundFX.playStartRound();
-          }
-        }, 1000);
-      },
-
-      stopTimer() {
-        if (this.timerInterval) {
-          clearInterval(this.timerInterval);
-          this.timerInterval = null;
-        }
-        const disp = document.getElementById('timerDisplay');
-        if (disp) disp.textContent = '30s Timer';
-      },
-
-      // MOBILE CONTROLLER
-      joinAsMobilePlayer() {
-        soundFX.init();
-        const code = document.getElementById('joinRoomCodeInput').value.trim().toUpperCase();
-        const name = document.getElementById('joinPlayerNameInput').value.trim();
-        if (!code || !name) {
-          this.showToast('Please enter both the Room Code and your Name!');
-          return;
-        }
-
-        this.role = 'player';
-        this.roomCode = code;
-        this.mobilePlayerName = name;
-        this.mobilePlayerId = 'mob_' + Date.now() + '_' + Math.floor(Math.random() * 999);
-
-        this.players[this.mobilePlayerId] = {
-          id: this.mobilePlayerId,
-          name: this.mobilePlayerName,
-          score: 0,
-          isManual: false,
-          guesses: {}
-        };
-
-        document.getElementById('mobilePlayerNameDisplay').textContent = this.mobilePlayerName;
-        document.getElementById('mobileAvatarLetter').textContent = this.mobilePlayerName.charAt(0).toUpperCase();
-        document.getElementById('mobileRoomCodeDisplay').textContent = this.roomCode;
-
-        this.switchView('viewMobileController');
-        this.renderMobileView();
-        this.initPlayerPeerJS(this.roomCode);
-        this.pushRoomState();
-      },
-
-      renderMobileView() {
-        const me = this.players[this.mobilePlayerId];
-        if (me) document.getElementById('mobilePlayerScoreDisplay').textContent = (me.score || 0) + ' pts';
-
-        const stLobby = document.getElementById('mobileStateLobby');
-        const stGuess = document.getElementById('mobileStateGuessing');
-        const stRev   = document.getElementById('mobileStateRevealed');
-        stLobby.classList.add('hidden');
-        stGuess.classList.add('hidden');
-        stRev.classList.add('hidden');
-
-        if (this.roundStatus === 'lobby') {
-          stLobby.classList.remove('hidden');
-          return;
-        }
-
-        const round = this.rounds[this.currentRoundIndex];
-        if (!round) return;
-
-        if (this.roundStatus === 'guessing') {
-          stGuess.classList.remove('hidden');
-          document.getElementById('mobileRoundBadge').textContent = `Round ${this.currentRoundIndex + 1} / ${this.rounds.length}`;
-          document.getElementById('mobileCategoryBadge').textContent = round.type === 'price' ? 'The Price Is Right' : 'Baby Feud Trivia';
-          document.getElementById('mobileVisualIcon').textContent = round.emoji || '🍼';
-          document.getElementById('mobileBrandText').textContent = round.brand;
-          document.getElementById('mobileItemTitle').textContent = round.title;
-          document.getElementById('mobileItemPrompt').textContent = round.prompt;
-          document.getElementById('mobileUnitPrefix').textContent = round.unitPrefix || '#';
-
-          const existing = me && me.guesses ? me.guesses[this.currentRoundIndex] : undefined;
-          if (existing !== undefined && existing !== '') {
-            document.getElementById('mobileLockedConfirmation').classList.remove('hidden');
-          } else {
-            document.getElementById('mobileLockedConfirmation').classList.add('hidden');
-            document.getElementById('mobileGuessInput').value = '';
-          }
-        } else {
-          stRev.classList.remove('hidden');
-          const actual = Number(round.answer);
-          const myGuess = me && me.guesses ? me.guesses[this.currentRoundIndex] : undefined;
-          document.getElementById('mobileRevealActual').textContent = this.formatUnitValue(actual, round);
-          if (myGuess !== undefined && myGuess !== '') {
-            const diff = Math.abs(Number(myGuess) - actual);
-            document.getElementById('mobileRevealYourGuess').textContent = this.formatUnitValue(myGuess, round);
-            document.getElementById('mobileRevealDiff').textContent = 'Off by ' + this.formatUnitValue(diff, round);
-          } else {
-            document.getElementById('mobileRevealYourGuess').textContent = 'No Guess';
-            document.getElementById('mobileRevealDiff').textContent = '—';
-          }
-        }
-      },
-
-      submitMobileGuess() {
-        const val = document.getElementById('mobileGuessInput').value;
-        if (val === '' || isNaN(Number(val))) return;
-        if (!this.players[this.mobilePlayerId]) {
-          this.players[this.mobilePlayerId] = { id: this.mobilePlayerId, name: this.mobilePlayerName, score: 0, isManual: false, guesses: {} };
-        }
-        this.players[this.mobilePlayerId].guesses[this.currentRoundIndex] = parseFloat(val);
-        soundFX.playLockIn();
-        document.getElementById('mobileLockedConfirmation').classList.remove('hidden');
-        this.pushRoomState();
-      },
-
-      // PHONE SIMULATOR
-      openPhoneSimulator() {
-        document.getElementById('simRoomCodeLabel').textContent = this.roomCode;
-        document.getElementById('modalPhoneSimulator').classList.remove('hidden');
-        this.renderSimulatorState();
-      },
-      closePhoneSimulator() {
-        document.getElementById('modalPhoneSimulator').classList.add('hidden');
-      },
-      joinFromSimulator() {
-        const name = document.getElementById('simPlayerNameInput').value.trim();
-        if (!name) return;
-        this.simPlayerName = name;
-        this.simPlayerId = 'sim_' + Date.now();
-        this.players[this.simPlayerId] = { id: this.simPlayerId, name, score: 0, isManual: false, guesses: {} };
-        soundFX.playLockIn();
-        if (this.roundStatus === 'lobby') this.renderHostLobbyPlayers();
-        else if (this.roundStatus === 'guessing') this.renderHostGuessingList();
-        this.pushRoomState();
-        this.renderSimulatorState();
-      },
-      switchSimGuest() {
-        this.simPlayerId = null;
-        this.simPlayerName = '';
-        document.getElementById('simPlayerNameInput').value = '';
-        this.renderSimulatorState();
-      },
-      submitSimulatorGuess() {
-        if (!this.simPlayerId || !this.players[this.simPlayerId]) return;
-        const val = document.getElementById('simGuessInput').value;
-        if (val === '' || isNaN(Number(val))) return;
-        this.players[this.simPlayerId].guesses[this.currentRoundIndex] = parseFloat(val);
-        soundFX.playLockIn();
-        document.getElementById('simLockedMsg').classList.remove('hidden');
-        if (this.roundStatus === 'guessing') this.renderHostGuessingList();
-        this.pushRoomState();
-      },
-      renderSimulatorState() {
-        const modal = document.getElementById('modalPhoneSimulator');
-        if (!modal || modal.classList.contains('hidden')) return;
-        const joinScr = document.getElementById('simJoinScreen');
-        const actScr = document.getElementById('simActiveScreen');
-        if (!this.simPlayerId || !this.players[this.simPlayerId]) {
-          joinScr.classList.remove('hidden');
-          actScr.classList.add('hidden');
-          return;
-        }
-        joinScr.classList.add('hidden');
-        actScr.classList.remove('hidden');
-        const p = this.players[this.simPlayerId];
-        document.getElementById('simGuestNameTitle').textContent = p.name;
-        document.getElementById('simGuestScoreBadge').textContent = (p.score || 0) + ' pts';
-
-        if (this.roundStatus === 'lobby') {
-          document.getElementById('simLobbyWait').classList.remove('hidden');
-          document.getElementById('simRoundPad').classList.add('hidden');
-        } else {
-          document.getElementById('simLobbyWait').classList.add('hidden');
-          document.getElementById('simRoundPad').classList.remove('hidden');
-          const r = this.rounds[this.currentRoundIndex];
-          if (r) {
-            document.getElementById('simRoundHeader').textContent = `ROUND ${this.currentRoundIndex + 1} / ${this.rounds.length}`;
-            document.getElementById('simRoundTitle').textContent = `${r.emoji || '🍼'} ${r.title}`;
-            document.getElementById('simUnitPrefix').textContent = r.unitPrefix || '#';
-          }
-        }
-      },
-
-      // DOWNLOAD SINGLE FILE HTML
-      downloadSingleFileHtml() {
-        try {
-          const content = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-          const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'index.html';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 1500);
-          this.showToast('Downloaded index.html! Ready to upload to GitHub Pages.');
-        } catch (e) {
-          this.showToast('Use Copy Code in the editor to save index.html.');
-        }
-      },
-
-      // EDITOR & MODALS
-      openEditorModal() {
-        const container = document.getElementById('editorQuestionsContainer');
-        container.innerHTML = this.rounds.map((r, i) => `
-          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="px-2.5 py-0.5 rounded-lg bg-indigo-950 text-white font-bold text-xs">Round ${i + 1}</span>
-              <select id="editType_${i}" class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold bg-white">
-                <option value="price" ${r.type === 'price' ? 'selected' : ''}>🏷️ Price ($)</option>
-                <option value="trivia" ${r.type === 'trivia' ? 'selected' : ''}>🔢 Trivia Stat (#)</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <input id="editEmoji_${i}" type="text" value="${this.escapeHtml(r.emoji || '🍼')}" class="sm:col-span-2 px-2 py-1.5 rounded-xl border border-slate-300 text-center text-base bg-white" />
-              <input id="editBrand_${i}" type="text" value="${this.escapeHtml(r.brand)}" class="sm:col-span-4 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white" />
-              <input id="editTitle_${i}" type="text" value="${this.escapeHtml(r.title)}" class="sm:col-span-6 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white" />
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <input id="editPrompt_${i}" type="text" value="${this.escapeHtml(r.prompt)}" class="sm:col-span-8 px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white" />
-              <input id="editAnswer_${i}" type="number" step="any" value="${r.answer}" class="sm:col-span-4 px-3 py-1.5 rounded-xl border-2 border-pink-300 text-xs font-bold bg-white" />
-            </div>
-          </div>
-        `).join('');
-        const m = document.getElementById('modalEditor');
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-      },
-      closeEditorModal() {
-        const m = document.getElementById('modalEditor');
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-      },
-      saveEditorChanges() {
-        this.rounds.forEach((r, i) => {
-          const t = document.getElementById(`editType_${i}`).value;
-          r.type = t;
-          r.unitPrefix = t === 'price' ? '$' : '';
-          r.emoji = document.getElementById(`editEmoji_${i}`).value.trim() || '🍼';
-          r.brand = document.getElementById(`editBrand_${i}`).value.trim();
-          r.title = document.getElementById(`editTitle_${i}`).value.trim();
-          r.prompt = document.getElementById(`editPrompt_${i}`).value.trim();
-          const ans = parseFloat(document.getElementById(`editAnswer_${i}`).value);
-          if (!isNaN(ans)) r.answer = ans;
-        });
-        this.closeEditorModal();
-        if (this.role === 'host' && this.roundStatus !== 'lobby') this.renderHostRoundStage();
-        this.pushRoomState();
-        this.showToast('Custom rounds saved!');
-      },
-      resetDefaultQuestions() {
-        this.rounds = JSON.parse(JSON.stringify(DEFAULT_ROUNDS));
-        this.openEditorModal();
-      },
-      openLeaderboardModal() {
-        const listEl = document.getElementById('modalLeaderboardList');
-        const sorted = Object.values(this.players).sort((a, b) => (b.score || 0) - (a.score || 0));
-        listEl.innerHTML = sorted.length === 0
-          ? `<div class="text-center py-6 text-slate-400 text-xs">No guests added yet.</div>`
-          : sorted.map((p, i) => `
-              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                <span class="font-bold text-xs text-slate-800">${i + 1}. ${this.escapeHtml(p.name)}</span>
-                <span class="font-display font-bold text-sm text-indigo-600">${p.score || 0} pts</span>
-              </div>
-            `).join('');
-        const m = document.getElementById('modalLeaderboard');
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-      },
-      closeLeaderboardModal() {
-        const m = document.getElementById('modalLeaderboard');
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-      },
-      triggerTiebreakerModal() {
-        document.getElementById('tiebreakerAnswerBox').classList.add('hidden');
-        const m = document.getElementById('modalTiebreaker');
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-      },
-      openDeployModal() {
-        const m = document.getElementById('modalDeploy');
-        m.classList.remove('hidden');
-        m.classList.add('flex');
-      },
-      closeDeployModal() {
-        const m = document.getElementById('modalDeploy');
-        m.classList.add('hidden');
-        m.classList.remove('flex');
-      },
-      confirmReturnHome() {
-        this.stopTimer();
-        this.role = 'landing';
-        document.getElementById('navRoomPill').classList.add('hidden');
-        this.switchView('viewLanding');
-      },
-      switchView(viewId) {
-        ['viewLanding', 'viewHostLobby', 'viewHostGame', 'viewFinalPodium', 'viewMobileController'].forEach(v => {
-          const el = document.getElementById(v);
-          if (el) {
-            if (v === viewId) el.classList.remove('hidden');
-            else el.classList.add('hidden');
-          }
-        });
-      },
-      showToast(msg) {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        const t = document.createElement('div');
-        t.className = 'px-4 py-2 rounded-xl bg-indigo-950 text-white text-xs font-bold shadow-lg border border-indigo-700';
-        t.textContent = '✨ ' + msg;
-        container.appendChild(t);
-        setTimeout(() => t.remove(), 2600);
-      },
-      escapeHtml(str) {
-        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    let currentRoomCode = '';
+    let isHost = false;
+    let playerName = '';
+    let currentRoundIndex = 0;
+
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-    };
+      return code;
+    }
 
-    window.addEventListener('DOMContentLoaded', () => app.init());
+    function createRoom() {
+      currentRoomCode = generateRoomCode();
+      isHost = true;
+      
+      document.getElementById('display-room-code').innerText = currentRoomCode;
+      
+      // Render QR code pointing to current URL
+      const joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 160, height: 160 });
+
+      // Save room state to Firebase
+      db.ref('rooms/' + currentRoomCode).set({
+        state: 'lobby',
+        currentRound: 0,
+        players: {},
+        guesses: {}
+      });
+
+      // Listen for players
+      db.ref('rooms/' + currentRoomCode + '/players').on('value', snapshot => {
+        const players = snapshot.val() || {};
+        const playerListEl = document.getElementById('host-player-list');
+        playerListEl.innerHTML = '';
+        const names = Object.values(players);
+        document.getElementById('player-count').innerText = names.length;
+        names.forEach(name => {
+          const li = document.createElement('li');
+          li.className = 'player-tag';
+          li.innerText = name;
+          playerListEl.appendChild(li);
+        });
+      });
+
+      showView('view-host-lobby');
+    }
+
+    function joinRoom() {
+      const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
+      const nameInput = document.getElementById('input-player-name').value.trim();
+      
+      if (!codeInput || !nameInput) {
+        alert('Please enter both Room Code and your Name.');
+        return;
+      }
+      
+      currentRoomCode = codeInput;
+      playerName = nameInput;
+
+      // Register player
+      db.ref('rooms/' + currentRoomCode + '/players/' + nameInput).set(nameInput);
+
+      // Listen to room state updates
+      db.ref('rooms/' + currentRoomCode).on('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        if (data.state === 'in_game') {
+          currentRoundIndex = data.currentRound;
+          setupPlayerRound(currentRoundIndex);
+          showView('view-player-game');
+        }
+      });
+    }
+
+    function startGame() {
+      db.ref('rooms/' + currentRoomCode).update({
+        state: 'in_game',
+        currentRound: 0
+      });
+      setupHostRound(0);
+      showView('view-host-round');
+    }
+
+    function setupHostRound(index) {
+      currentRoundIndex = index;
+      const round = gameRounds[index];
+      document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
+      document.getElementById('host-round-title').innerText = round.title;
+      document.getElementById('host-round-desc').innerText = round.desc;
+      document.getElementById('host-reveal-price').style.display = 'none';
+      document.getElementById('btn-reveal').style.display = 'block';
+      document.getElementById('btn-next-round').style.display = 'none';
+      document.getElementById('host-guess-tbody').innerHTML = '';
+
+      // Reset guesses for this round in Firebase
+      db.ref('rooms/' + currentRoomCode + '/guesses/round_' + index).on('value', snapshot => {
+        const guesses = snapshot.val() || {};
+        renderGuessTable(guesses, round.value, false);
+      });
+    }
+
+    function setupPlayerRound(index) {
+      const round = gameRounds[index];
+      document.getElementById('player-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
+      document.getElementById('player-round-title').innerText = round.title;
+      document.getElementById('player-round-desc').innerText = round.desc;
+      document.getElementById('player-guess').value = '';
+      document.getElementById('player-input-box').style.display = 'block';
+      document.getElementById('player-submitted-msg').style.display = 'none';
+    }
+
+    function submitPlayerGuess() {
+      const val = parseFloat(document.getElementById('player-guess').value);
+      if (isNaN(val)) {
+        alert('Please enter a valid number.');
+        return;
+      }
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${playerName}`).set(val);
+      document.getElementById('player-input-box').style.display = 'none';
+      document.getElementById('player-submitted-msg').style.display = 'block';
+    }
+
+    function addManualGuess() {
+      const name = document.getElementById('manual-name').value.trim();
+      const val = parseFloat(document.getElementById('manual-guess').value);
+      if (!name || isNaN(val)) return;
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${name}`).set(val);
+      document.getElementById('manual-name').value = '';
+      document.getElementById('manual-guess').value = '';
+    }
+
+    function renderGuessTable(guesses, actualValue, revealed) {
+      const tbody = document.getElementById('host-guess-tbody');
+      tbody.innerHTML = '';
+
+      let closestDiff = Infinity;
+      let winners = [];
+
+      // Find closest guess
+      Object.entries(guesses).forEach(([name, guess]) => {
+        const diff = Math.abs(guess - actualValue);
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          winners = [name];
+        } else if (diff === closestDiff) {
+          winners.push(name);
+        }
+      });
+
+      Object.entries(guesses).forEach(([name, guess]) => {
+        const tr = document.createElement('tr');
+        const isWinner = revealed && winners.includes(name);
+        if (isWinner) tr.className = 'winner-row';
+
+        const diffText = revealed ? (guess > actualValue ? `+$${(guess - actualValue).toFixed(2)}` : `-$${(actualValue - guess).toFixed(2)}`) : '???';
+        tr.innerHTML = `
+          <td>${name} ${isWinner ? '👑' : ''}</td>
+          <td>$${parseFloat(guess).toFixed(2)}</td>
+          <td>${diffText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function revealAnswer() {
+      const round = gameRounds[currentRoundIndex];
+      const revealEl = document.getElementById('host-reveal-price');
+      revealEl.innerText = `$${round.value.toFixed(2)}`;
+      revealEl.style.display = 'block';
+      document.getElementById('btn-reveal').style.display = 'none';
+      document.getElementById('btn-next-round').style.display = 'block';
+
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+      // Fetch final guesses to highlight winner
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}`).once('value', snapshot => {
+        renderGuessTable(snapshot.val() || {}, round.value, true);
+      });
+    }
+
+    function nextRound() {
+      if (currentRoundIndex + 1 < gameRounds.length) {
+        const nextIdx = currentRoundIndex + 1;
+        db.ref('rooms/' + currentRoomCode).update({ currentRound: nextIdx });
+        setupHostRound(nextIdx);
+      } else {
+        alert('Game Complete! Thanks for playing.');
+      }
+    }
+
+    // Auto-fill room code if in URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      document.getElementById('input-room-code').value = roomParam;
+    }
   </script>
-
-</body></html>
+</body>
+</html>
