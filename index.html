@@ -232,4 +232,278 @@
       { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price", value: 1.79, img: "https://m.media-amazon.com/images/I/71g0uA6-uPL._SL1500_.jpg" },
       { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price", value: 199.99, img: "https://m.media-amazon.com/images/I/61j6W1nN-aL._SL1500_.jpg" },
       { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500, img: "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=500&q=80" },
-      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700, img: "
+      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700, img: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=500&q=80" },
+      { title: "Trivia: Average Daily Feedings for a Newborn", desc: "How many total feedings occur in a 24-hour period?", value: 10, img: "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=500&q=80" },
+      { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000, img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80" }
+    ];
+
+    let currentRoomCode = '';
+    let isHost = false;
+    let playerName = '';
+    let currentRoundIndex = 0;
+    let playerScores = {};
+
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return code;
+    }
+
+    function createRoom() {
+      currentRoomCode = generateRoomCode();
+      isHost = true;
+      document.getElementById('display-room-code').innerText = currentRoomCode;
+
+      const joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 160, height: 160 });
+
+      const roomRef = db.ref('rooms/' + currentRoomCode);
+      roomRef.set({
+        state: 'lobby',
+        currentRound: 0,
+        players: {},
+        guesses: {},
+        scores: {}
+      });
+
+      roomRef.child('players').on('value', snapshot => {
+        const players = snapshot.val() || {};
+        const playerListEl = document.getElementById('host-player-list');
+        playerListEl.innerHTML = '';
+        const names = Object.values(players);
+        document.getElementById('player-count').innerText = names.length;
+        names.forEach(name => {
+          const li = document.createElement('li');
+          li.className = 'player-tag';
+          li.innerText = name;
+          playerListEl.appendChild(li);
+        });
+      });
+
+      showView('view-host-lobby');
+    }
+
+    function joinRoom() {
+      const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
+      const nameInput = document.getElementById('input-player-name').value.trim();
+
+      if (!codeInput || !nameInput) {
+        alert('Please enter both Room Code and your Name.');
+        return;
+      }
+
+      currentRoomCode = codeInput;
+      playerName = nameInput;
+      document.getElementById('waiting-player-name').innerText = playerName;
+
+      db.ref(`rooms/${currentRoomCode}/players/${playerName}`).set(playerName);
+
+      showView('view-player-waiting');
+
+      db.ref(`rooms/${currentRoomCode}`).on('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        if (data.state === 'in_game') {
+          if (currentRoundIndex !== data.currentRound || !document.getElementById('view-player-game').classList.contains('active')) {
+            currentRoundIndex = data.currentRound;
+            setupPlayerRound(data.currentRound);
+            showView('view-player-game');
+          }
+        } else if (data.state === 'podium') {
+          renderPodium(data.scores || {});
+          showView('view-podium');
+        }
+      });
+    }
+
+    function startGame() {
+      db.ref(`rooms/${currentRoomCode}`).update({
+        state: 'in_game',
+        currentRound: 0
+      });
+      setupHostRound(0);
+      showView('view-host-round');
+    }
+
+    function setupHostRound(index) {
+      currentRoundIndex = index;
+      const round = gameRounds[index];
+      document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
+      document.getElementById('host-round-title').innerText = round.title;
+      document.getElementById('host-round-desc').innerText = round.desc;
+      document.getElementById('host-product-img').src = round.img;
+      document.getElementById('host-reveal-price').style.display = 'none';
+      document.getElementById('btn-reveal').style.display = 'block';
+      document.getElementById('btn-next-round').style.display = 'none';
+      document.getElementById('round-table-title').innerText = "Player Guesses";
+      document.getElementById('host-guess-tbody').innerHTML = '';
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${index}`).on('value', snapshot => {
+        const guesses = snapshot.val() || {};
+        renderGuessTable(guesses, round.value, false);
+      });
+    }
+
+    function setupPlayerRound(index) {
+      currentRoundIndex = index;
+      const round = gameRounds[index];
+      document.getElementById('player-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
+      document.getElementById('player-round-title').innerText = round.title;
+      document.getElementById('player-round-desc').innerText = round.desc;
+      document.getElementById('player-product-img').src = round.img;
+      document.getElementById('player-guess').value = '';
+      document.getElementById('player-input-box').style.display = 'block';
+      document.getElementById('player-submitted-msg').style.display = 'none';
+    }
+
+    function submitPlayerGuess() {
+      const val = parseFloat(document.getElementById('player-guess').value);
+      if (isNaN(val)) {
+        alert('Please enter a valid number.');
+        return;
+      }
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${playerName}`).set(val);
+      document.getElementById('player-input-box').style.display = 'none';
+      document.getElementById('player-submitted-msg').style.display = 'block';
+    }
+
+    function addManualGuess() {
+      const name = document.getElementById('manual-name').value.trim();
+      const val = parseFloat(document.getElementById('manual-guess').value);
+      if (!name || isNaN(val)) return;
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${name}`).set(val);
+      document.getElementById('manual-name').value = '';
+      document.getElementById('manual-guess').value = '';
+    }
+
+    function renderGuessTable(guesses, actualValue, revealed) {
+      const tbody = document.getElementById('host-guess-tbody');
+      tbody.innerHTML = '';
+
+      let entries = Object.entries(guesses).map(([name, guess]) => {
+        const diff = Math.abs(guess - actualValue);
+        return { name, guess, diff, score: playerScores[name] || 0 };
+      });
+
+      if (revealed) {
+        entries.sort((a, b) => b.score - a.score || a.diff - b.diff);
+      }
+
+      entries.forEach((entry, idx) => {
+        const tr = document.createElement('tr');
+        const isWinner = revealed && idx === 0;
+        if (isWinner) tr.className = 'winner-row';
+
+        const diffText = revealed ? (entry.guess > actualValue ? `+$${(entry.guess - actualValue).toFixed(2)}` : `-$${(actualValue - entry.guess).toFixed(2)}`) : '???';
+        tr.innerHTML = `
+          <td>${revealed ? `#${idx + 1}` : '-'}</td>
+          <td>${entry.name} ${isWinner ? '👑' : ''}</td>
+          <td>$${parseFloat(entry.guess).toFixed(2)}</td>
+          <td>${diffText}</td>
+          <td><strong>${entry.score} pts</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function revealAnswer() {
+      const round = gameRounds[currentRoundIndex];
+      const revealEl = document.getElementById('host-reveal-price');
+      revealEl.innerText = `$${round.value.toFixed(2)}`;
+      revealEl.style.display = 'block';
+      document.getElementById('btn-reveal').style.display = 'none';
+      
+      const btnNext = document.getElementById('btn-next-round');
+      btnNext.innerText = (currentRoundIndex + 1 === gameRounds.length) ? "Finish Game & Reveal Winner 🏆" : "Next Item ➡️";
+      btnNext.style.display = 'block';
+
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}`).once('value', snapshot => {
+        const guesses = snapshot.val() || {};
+        let closestDiff = Infinity;
+        let roundWinners = [];
+
+        Object.entries(guesses).forEach(([name, guess]) => {
+          const diff = Math.abs(guess - round.value);
+          if (diff < closestDiff) {
+            closestDiff = diff;
+            roundWinners = [name];
+          } else if (diff === closestDiff) {
+            roundWinners.push(name);
+          }
+        });
+
+        // Award 1 point to closest guesser(s)
+        roundWinners.forEach(winner => {
+          playerScores[winner] = (playerScores[winner] || 0) + 1;
+        });
+
+        db.ref(`rooms/${currentRoomCode}/scores`).set(playerScores);
+        document.getElementById('round-table-title').innerText = "Leaderboard & Round Scores";
+        renderGuessTable(guesses, round.value, true);
+      });
+    }
+
+    function renderPodium(scores) {
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      const winnersDiv = document.getElementById('podium-winners');
+      const tbody = document.getElementById('podium-tbody');
+      winnersDiv.innerHTML = '';
+      tbody.innerHTML = '';
+
+      if (sorted.length > 0) {
+        winnersDiv.innerHTML += `<div class="podium-rank">🥇 1st Place: ${sorted[0][0]} (${sorted[0][1]} pts)</div>`;
+      }
+      if (sorted.length > 1) {
+        winnersDiv.innerHTML += `<div class="podium-rank">🥈 2nd Place: ${sorted[1][0]} (${sorted[1][1]} pts)</div>`;
+      }
+      if (sorted.length > 2) {
+        winnersDiv.innerHTML += `<div class="podium-rank">🥉 3rd Place: ${sorted[2][0]} (${sorted[2][1]} pts)</div>`;
+      }
+
+      sorted.forEach(([name, score], idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${idx + 1}</td>
+          <td>${name}</td>
+          <td><strong>${score} pts</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function nextRound() {
+      if (currentRoundIndex + 1 < gameRounds.length) {
+        const nextIdx = currentRoundIndex + 1;
+        db.ref(`rooms/${currentRoomCode}`).update({ currentRound: nextIdx });
+        setupHostRound(nextIdx);
+      } else {
+        db.ref(`rooms/${currentRoomCode}`).update({ state: 'podium' });
+        renderPodium(playerScores);
+        showView('view-podium');
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+      }
+    }
+
+    // Auto-fill room code from QR URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      document.getElementById('input-room-code').value = roomParam;
+    }
+  </script>
+</body>
+</html>
