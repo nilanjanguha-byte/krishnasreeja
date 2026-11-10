@@ -352,3 +352,117 @@
       document.getElementById('host-round-title').innerText = round.title;
       document.getElementById('host-round-desc').innerText = round.desc;
       document.getElementById('host-reveal-price').style.display = 'none';
+      document.getElementById('btn-reveal').style.display = 'block';
+      document.getElementById('btn-next-round').style.display = 'none';
+      document.getElementById('host-guess-tbody').innerHTML = '';
+    }
+
+    function setupPlayerRound(index) {
+      currentRoundIndex = index;
+      const round = gameRounds[index];
+      document.getElementById('player-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
+      document.getElementById('player-round-title').innerText = round.title;
+      document.getElementById('player-round-desc').innerText = round.desc;
+      document.getElementById('player-guess').value = '';
+      document.getElementById('player-input-box').style.display = 'block';
+      document.getElementById('player-submitted-msg').style.display = 'none';
+    }
+
+    function submitPlayerGuess() {
+      const val = parseFloat(document.getElementById('player-guess').value);
+      if (isNaN(val)) {
+        alert('Please enter a valid number.');
+        return;
+      }
+
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'PLAYER_GUESS', name: playerName, guess: val });
+      }
+      if (hostConnection && hostConnection.open) {
+        hostConnection.send({ type: 'GUESS', name: playerName, guess: val });
+      }
+
+      document.getElementById('player-input-box').style.display = 'none';
+      document.getElementById('player-submitted-msg').style.display = 'block';
+    }
+
+    function handleReceivedGuess(name, guess) {
+      currentGuesses[name] = guess;
+      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
+    }
+
+    function addManualGuess() {
+      const name = document.getElementById('manual-name').value.trim();
+      const val = parseFloat(document.getElementById('manual-guess').value);
+      if (!name || isNaN(val)) return;
+
+      currentGuesses[name] = val;
+      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
+      document.getElementById('manual-name').value = '';
+      document.getElementById('manual-guess').value = '';
+    }
+
+    function renderGuessTable(guesses, actualValue, revealed) {
+      const tbody = document.getElementById('host-guess-tbody');
+      tbody.innerHTML = '';
+
+      let closestDiff = Infinity;
+      let winners = [];
+
+      Object.entries(guesses).forEach(([name, guess]) => {
+        const diff = Math.abs(guess - actualValue);
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          winners = [name];
+        } else if (diff === closestDiff) {
+          winners.push(name);
+        }
+      });
+
+      Object.entries(guesses).forEach(([name, guess]) => {
+        const tr = document.createElement('tr');
+        const isWinner = revealed && winners.includes(name);
+        if (isWinner) tr.className = 'winner-row';
+
+        const diffText = revealed ? (guess > actualValue ? `+$${(guess - actualValue).toFixed(2)}` : `-$${(actualValue - guess).toFixed(2)}`) : '???';
+        tr.innerHTML = `
+          <td>${name} ${isWinner ? '👑' : ''}</td>
+          <td>$${parseFloat(guess).toFixed(2)}</td>
+          <td>${diffText}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function revealAnswer() {
+      const round = gameRounds[currentRoundIndex];
+      const revealEl = document.getElementById('host-reveal-price');
+      revealEl.innerText = `$${round.value.toFixed(2)}`;
+      revealEl.style.display = 'block';
+      document.getElementById('btn-reveal').style.display = 'none';
+      document.getElementById('btn-next-round').style.display = 'block';
+
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      renderGuessTable(currentGuesses, round.value, true);
+    }
+
+    function nextRound() {
+      if (currentRoundIndex + 1 < gameRounds.length) {
+        const nextIdx = currentRoundIndex + 1;
+        if (broadcastChannel) broadcastChannel.postMessage({ type: 'NEXT_ROUND', roundIndex: nextIdx });
+        playerConnections.forEach(conn => conn.send({ type: 'NEXT_ROUND', roundIndex: nextIdx }));
+        setupHostRound(nextIdx);
+      } else {
+        alert('Game Complete! Thanks for playing.');
+      }
+    }
+
+    // Auto-fill room code from URL query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      document.getElementById('input-room-code').value = roomParam;
+    }
+  </script>
+</body>
+</html>
