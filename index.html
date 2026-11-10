@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Baby Shower: Price Is Right & Trivia Feud</title>
   
-  <!-- PubNub SDK for zero-config global cloud messaging -->
-  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
+  <!-- Firebase App & Realtime Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <!-- QR Code Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Canvas Confetti -->
@@ -29,7 +30,7 @@
     body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 1rem; }
     
     .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1.5rem; }
-    header { text-align: center; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+    header { text-align: center; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem; }
     h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 0.25rem; }
     p.subtitle { color: var(--text-sub); font-size: 0.95rem; }
     
@@ -42,7 +43,6 @@
     .btn-accent { background-color: var(--accent); color: white; }
     .btn-accent:hover { background-color: var(--accent-hover); }
     .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
-    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto; }
     
     .form-group { margin-bottom: 1rem; }
     label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-sub); }
@@ -55,10 +55,11 @@
     .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     @media(min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
     
-    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; min-height: 40px; }
-    .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
     
     .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+    .product-img { max-width: 260px; max-height: 200px; object-fit: contain; border-radius: 8px; margin: 0.5rem auto 1rem auto; display: block; background: #fff; padding: 0.5rem; border: 1px solid var(--border-color); }
     .round-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
     .round-desc { color: var(--text-sub); font-size: 1rem; margin-bottom: 1rem; }
     .reveal-price { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 1rem 0; display: none; }
@@ -67,6 +68,10 @@
     .guess-table th, .guess-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
     .guess-table th { background-color: #f3f4f6; color: var(--text-sub); font-size: 0.85rem; text-transform: uppercase; }
     .winner-row { background-color: #d1fae5; font-weight: bold; }
+    
+    .podium-box { text-align: center; padding: 1.5rem; background: #fffbe6; border: 2px solid #facc15; border-radius: 12px; margin-bottom: 1.5rem; }
+    .podium-title { font-size: 1.8rem; font-weight: 800; color: #b45309; margin-bottom: 1rem; }
+    .podium-rank { font-size: 1.2rem; margin: 0.5rem 0; font-weight: 700; }
     
     .manual-entry { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); }
   </style>
@@ -110,10 +115,7 @@
         <div class="room-code" id="display-room-code">----</div>
       </div>
       <div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h3>Joined Players (<span id="player-count">0</span>)</h3>
-          <button class="btn btn-outline btn-sm" onclick="promptAddPlayer()">+ Add Player Manually</button>
-        </div>
+        <h3>Joined Players (<span id="player-count">0</span>)</h3>
         <ul id="host-player-list" class="player-list"></ul>
       </div>
       <br>
@@ -124,6 +126,7 @@
     <div id="view-host-round" class="view">
       <div class="round-card">
         <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="host-round-num">Round 1 of 10</p>
+        <img id="host-product-img" class="product-img" src="" alt="Product Image">
         <h2 class="round-title" id="host-round-title">Loading...</h2>
         <p class="round-desc" id="host-round-desc"></p>
         <div id="host-reveal-price" class="reveal-price">$0.00</div>
@@ -131,13 +134,15 @@
       </div>
 
       <div>
-        <h3>Player Guesses</h3>
+        <h3 id="round-table-title">Player Guesses</h3>
         <table class="guess-table">
           <thead>
             <tr>
+              <th>Rank</th>
               <th>Player</th>
               <th>Guess</th>
               <th>Difference</th>
+              <th>Total Points</th>
             </tr>
           </thead>
           <tbody id="host-guess-tbody"></tbody>
@@ -169,6 +174,7 @@
     <div id="view-player-game" class="view">
       <div class="round-card">
         <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="player-round-num">Round 1</p>
+        <img id="player-product-img" class="product-img" src="" alt="Product Image">
         <h2 class="round-title" id="player-round-title">Waiting for Host...</h2>
         <p class="round-desc" id="player-round-desc"></p>
       </div>
@@ -184,284 +190,46 @@
         ✓ Guess Locked In! Watch the TV screen for the reveal.
       </div>
     </div>
+
+    <!-- END OF GAME PODIUM VIEW -->
+    <div id="view-podium" class="view">
+      <div class="podium-box">
+        <h2 class="podium-title">🏆 Final Game Leaderboard</h2>
+        <div id="podium-winners"></div>
+      </div>
+
+      <h3>Full Standings</h3>
+      <table class="guess-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Total Points</th>
+          </tr>
+        </thead>
+        <tbody id="podium-tbody"></tbody>
+      </table>
+    </div>
+
   </div>
 
   <script>
-    // 10 Game Items & Answers
+    // Global Firebase Initialization (Free Open Realtime Cloud Database)
+    const firebaseConfig = {
+      databaseURL: "https://krishnasreeja-game-default-rtdb.firebaseio.com/"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    // 10 Game Items, Descriptions, Images & Actual Retail Values
     const gameRounds = [
-      { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price", value: 55.99 },
-      { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price", value: 15.99 },
-      { title: "Desitin Maximum Strength Diaper Rash Paste (16 oz)", desc: "Retail Price for the large tub", value: 18.99 },
-      { title: "Diaper Genie Complete Refill 3-Pack", desc: "Retail Price", value: 21.99 },
-      { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price", value: 1.79 },
-      { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price", value: 199.99 },
-      { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500 },
-      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700 },
-      { title: "Trivia: Average Daily Feedings for a Newborn", desc: "How many total feedings occur in a 24-hour period?", value: 10 },
-      { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000 }
-    ];
-
-    let currentRoomCode = '';
-    let isHost = false;
-    let playerName = '';
-    let currentRoundIndex = 0;
-    let joinedPlayers = [];
-    let currentGuesses = {};
-    let pubnub = null;
-    let broadcastChannel = null;
-
-    // Public demo keys for instant open web network sync
-    const pubkey = 'sub-c-57224213-9aa0-4b72-b7ca-4899c759553f';
-    const subkey = 'sub-c-57224213-9aa0-4b72-b7ca-4899c759553f';
-
-    function showView(viewId) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById(viewId).classList.add('active');
-    }
-
-    function generateRoomCode() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return code;
-    }
-
-    function initNetworkSync(code) {
-      // 1. BroadcastChannel for local tab testing fallback
-      if ('BroadcastChannel' in window) {
-        broadcastChannel = new BroadcastChannel('baby_shower_' + code);
-        broadcastChannel.onmessage = (event) => handleIncomingMessage(event.data);
-      }
-
-      // 2. PubNub Cloud Relay for 5G/LTE Cellular & Cross-Network Sync
-      try {
-        pubnub = new PubNub({
-          publishKey: 'demo',
-          subscribeKey: 'demo',
-          userId: 'user_' + Math.random().toString(36).substring(2, 9)
-        });
-
-        pubnub.addListener({
-          message: (event) => handleIncomingMessage(event.message)
-        });
-
-        pubnub.subscribe({ channels: ['baby_shower_room_' + code] });
-      } catch (e) {
-        console.warn('PubNub network sync fallback to BroadcastChannel', e);
-      }
-    }
-
-    function broadcastMsg(msg) {
-      if (broadcastChannel) broadcastChannel.postMessage(msg);
-      if (pubnub) {
-        pubnub.publish({
-          channel: 'baby_shower_room_' + currentRoomCode,
-          message: msg
-        });
-      }
-    }
-
-    function handleIncomingMessage(msg) {
-      if (!msg || !msg.type) return;
-
-      if (isHost) {
-        if (msg.type === 'PLAYER_JOIN') {
-          addPlayerToHost(msg.name);
-          // Send current state to late joiners
-          broadcastMsg({ type: 'SYNC_STATE', state: document.getElementById('view-host-round').classList.contains('active') ? 'in_game' : 'lobby', roundIndex: currentRoundIndex });
-        } else if (msg.type === 'PLAYER_GUESS') {
-          handleReceivedGuess(msg.name, msg.guess);
-        }
-      } else {
-        if (msg.type === 'START_GAME' || (msg.type === 'SYNC_STATE' && msg.state === 'in_game')) {
-          currentRoundIndex = msg.roundIndex || 0;
-          setupPlayerRound(currentRoundIndex);
-          showView('view-player-game');
-        } else if (msg.type === 'NEXT_ROUND') {
-          currentRoundIndex = msg.roundIndex;
-          setupPlayerRound(msg.roundIndex);
-          showView('view-player-game');
-        }
-      }
-    }
-
-    function createRoom() {
-      currentRoomCode = generateRoomCode();
-      isHost = true;
-      document.getElementById('display-room-code').innerText = currentRoomCode;
-
-      // QR Code
-      const joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
-      document.getElementById('qrcode').innerHTML = '';
-      new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 160, height: 160 });
-
-      initNetworkSync(currentRoomCode);
-      showView('view-host-lobby');
-    }
-
-    function addPlayerToHost(name) {
-      if (name && !joinedPlayers.includes(name)) {
-        joinedPlayers.push(name);
-        const ul = document.getElementById('host-player-list');
-        const li = document.createElement('li');
-        li.className = 'player-tag';
-        li.innerText = '👤 ' + name;
-        ul.appendChild(li);
-        document.getElementById('player-count').innerText = joinedPlayers.length;
-      }
-    }
-
-    function promptAddPlayer() {
-      const name = prompt("Enter guest name:");
-      if (name && name.trim()) {
-        addPlayerToHost(name.trim());
-      }
-    }
-
-    function joinRoom() {
-      const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
-      const nameInput = document.getElementById('input-player-name').value.trim();
-
-      if (!codeInput || !nameInput) {
-        alert('Please enter both Room Code and your Name.');
-        return;
-      }
-
-      currentRoomCode = codeInput;
-      playerName = nameInput;
-      document.getElementById('waiting-player-name').innerText = playerName;
-
-      initNetworkSync(currentRoomCode);
-
-      // Announce Join via Cloud Relay
-      setTimeout(() => {
-        broadcastMsg({ type: 'PLAYER_JOIN', name: playerName });
-      }, 500);
-
-      showView('view-player-waiting');
-    }
-
-    function startGame() {
-      broadcastMsg({ type: 'START_GAME', roundIndex: 0 });
-      setupHostRound(0);
-      showView('view-host-round');
-    }
-
-    function setupHostRound(index) {
-      currentRoundIndex = index;
-      currentGuesses = {};
-      const round = gameRounds[index];
-      document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
-      document.getElementById('host-round-title').innerText = round.title;
-      document.getElementById('host-round-desc').innerText = round.desc;
-      document.getElementById('host-reveal-price').style.display = 'none';
-      document.getElementById('btn-reveal').style.display = 'block';
-      document.getElementById('btn-next-round').style.display = 'none';
-      document.getElementById('host-guess-tbody').innerHTML = '';
-    }
-
-    function setupPlayerRound(index) {
-      currentRoundIndex = index;
-      const round = gameRounds[index];
-      document.getElementById('player-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
-      document.getElementById('player-round-title').innerText = round.title;
-      document.getElementById('player-round-desc').innerText = round.desc;
-      document.getElementById('player-guess').value = '';
-      document.getElementById('player-input-box').style.display = 'block';
-      document.getElementById('player-submitted-msg').style.display = 'none';
-    }
-
-    function submitPlayerGuess() {
-      const val = parseFloat(document.getElementById('player-guess').value);
-      if (isNaN(val)) {
-        alert('Please enter a valid number.');
-        return;
-      }
-
-      broadcastMsg({ type: 'PLAYER_GUESS', name: playerName, guess: val });
-
-      document.getElementById('player-input-box').style.display = 'none';
-      document.getElementById('player-submitted-msg').style.display = 'block';
-    }
-
-    function handleReceivedGuess(name, guess) {
-      currentGuesses[name] = guess;
-      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
-    }
-
-    function addManualGuess() {
-      const name = document.getElementById('manual-name').value.trim();
-      const val = parseFloat(document.getElementById('manual-guess').value);
-      if (!name || isNaN(val)) return;
-
-      currentGuesses[name] = val;
-      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
-      document.getElementById('manual-name').value = '';
-      document.getElementById('manual-guess').value = '';
-    }
-
-    function renderGuessTable(guesses, actualValue, revealed) {
-      const tbody = document.getElementById('host-guess-tbody');
-      tbody.innerHTML = '';
-
-      let closestDiff = Infinity;
-      let winners = [];
-
-      Object.entries(guesses).forEach(([name, guess]) => {
-        const diff = Math.abs(guess - actualValue);
-        if (diff < closestDiff) {
-          closestDiff = diff;
-          winners = [name];
-        } else if (diff === closestDiff) {
-          winners.push(name);
-        }
-      });
-
-      Object.entries(guesses).forEach(([name, guess]) => {
-        const tr = document.createElement('tr');
-        const isWinner = revealed && winners.includes(name);
-        if (isWinner) tr.className = 'winner-row';
-
-        const diffText = revealed ? (guess > actualValue ? `+$${(guess - actualValue).toFixed(2)}` : `-$${(actualValue - guess).toFixed(2)}`) : '???';
-        tr.innerHTML = `
-          <td>${name} ${isWinner ? '👑' : ''}</td>
-          <td>$${parseFloat(guess).toFixed(2)}</td>
-          <td>${diffText}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function revealAnswer() {
-      const round = gameRounds[currentRoundIndex];
-      const revealEl = document.getElementById('host-reveal-price');
-      revealEl.innerText = `$${round.value.toFixed(2)}`;
-      revealEl.style.display = 'block';
-      document.getElementById('btn-reveal').style.display = 'none';
-      document.getElementById('btn-next-round').style.display = 'block';
-
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      renderGuessTable(currentGuesses, round.value, true);
-    }
-
-    function nextRound() {
-      if (currentRoundIndex + 1 < gameRounds.length) {
-        const nextIdx = currentRoundIndex + 1;
-        broadcastMsg({ type: 'NEXT_ROUND', roundIndex: nextIdx });
-        setupHostRound(nextIdx);
-      } else {
-        alert('Game Complete! Thanks for playing.');
-      }
-    }
-
-    // Auto-fill room code from QR URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomParam = urlParams.get('room');
-    if (roomParam) {
-      document.getElementById('input-room-code').value = roomParam;
-    }
-  </script>
-</body>
-</html>
+      { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price", value: 55.99, img: "https://m.media-amazon.com/images/I/71Y+P4sX2GL._SL1500_.jpg" },
+      { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price", value: 15.99, img: "https://m.media-amazon.com/images/I/61Nl-X3qS3L._SL1500_.jpg" },
+      { title: "Desitin Maximum Strength Diaper Rash Paste (16 oz)", desc: "Retail Price for the large tub", value: 18.99, img: "https://m.media-amazon.com/images/I/71B49oV9mSL._SL1500_.jpg" },
+      { title: "Diaper Genie Complete Refill 3-Pack", desc: "Retail Price", value: 21.99, img: "https://m.media-amazon.com/images/I/61Xk7e4GfNL._SL1500_.jpg" },
+      { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price", value: 1.79, img: "https://m.media-amazon.com/images/I/71g0uA6-uPL._SL1500_.jpg" },
+      { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price", value: 199.99, img: "https://m.media-amazon.com/images/I/61j6W1nN-aL._SL1500_.jpg" },
+      { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500, img: "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=500&q=80" },
+      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700, img: "
