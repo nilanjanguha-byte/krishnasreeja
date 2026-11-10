@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Baby Shower: Price Is Right & Trivia Feud</title>
   
-  <!-- Firebase App & Realtime Database SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- PubNub SDK for zero-config global cloud messaging -->
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.7.2.2.min.js"></script>
   <!-- QR Code Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Canvas Confetti -->
@@ -43,6 +42,7 @@
     .btn-accent { background-color: var(--accent); color: white; }
     .btn-accent:hover { background-color: var(--accent-hover); }
     .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; width: auto; }
     
     .form-group { margin-bottom: 1rem; }
     label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-sub); }
@@ -55,8 +55,8 @@
     .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     @media(min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
     
-    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-    .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
+    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; min-height: 40px; }
+    .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
     
     .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
     .round-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
@@ -110,7 +110,10 @@
         <div class="room-code" id="display-room-code">----</div>
       </div>
       <div>
-        <h3>Joined Players (<span id="player-count">0</span>)</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3>Joined Players (<span id="player-count">0</span>)</h3>
+          <button class="btn btn-outline btn-sm" onclick="promptAddPlayer()">+ Add Player Manually</button>
+        </div>
         <ul id="host-player-list" class="player-list"></ul>
       </div>
       <br>
@@ -184,15 +187,6 @@
   </div>
 
   <script>
-    // Global Firebase Initialization (Free Open Signaling)
-    const firebaseConfig = {
-      databaseURL: "https://krishnasreeja-game-default-rtdb.firebaseio.com/"
-    };
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.database();
-
     // 10 Game Items & Answers
     const gameRounds = [
       { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price", value: 55.99 },
@@ -211,6 +205,14 @@
     let isHost = false;
     let playerName = '';
     let currentRoundIndex = 0;
+    let joinedPlayers = [];
+    let currentGuesses = {};
+    let pubnub = null;
+    let broadcastChannel = null;
+
+    // Public demo keys for instant open web network sync
+    const pubkey = 'sub-c-57224213-9aa0-4b72-b7ca-4899c759553f';
+    const subkey = 'sub-c-57224213-9aa0-4b72-b7ca-4899c759553f';
 
     function showView(viewId) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -226,41 +228,96 @@
       return code;
     }
 
+    function initNetworkSync(code) {
+      // 1. BroadcastChannel for local tab testing fallback
+      if ('BroadcastChannel' in window) {
+        broadcastChannel = new BroadcastChannel('baby_shower_' + code);
+        broadcastChannel.onmessage = (event) => handleIncomingMessage(event.data);
+      }
+
+      // 2. PubNub Cloud Relay for 5G/LTE Cellular & Cross-Network Sync
+      try {
+        pubnub = new PubNub({
+          publishKey: 'demo',
+          subscribeKey: 'demo',
+          userId: 'user_' + Math.random().toString(36).substring(2, 9)
+        });
+
+        pubnub.addListener({
+          message: (event) => handleIncomingMessage(event.message)
+        });
+
+        pubnub.subscribe({ channels: ['baby_shower_room_' + code] });
+      } catch (e) {
+        console.warn('PubNub network sync fallback to BroadcastChannel', e);
+      }
+    }
+
+    function broadcastMsg(msg) {
+      if (broadcastChannel) broadcastChannel.postMessage(msg);
+      if (pubnub) {
+        pubnub.publish({
+          channel: 'baby_shower_room_' + currentRoomCode,
+          message: msg
+        });
+      }
+    }
+
+    function handleIncomingMessage(msg) {
+      if (!msg || !msg.type) return;
+
+      if (isHost) {
+        if (msg.type === 'PLAYER_JOIN') {
+          addPlayerToHost(msg.name);
+          // Send current state to late joiners
+          broadcastMsg({ type: 'SYNC_STATE', state: document.getElementById('view-host-round').classList.contains('active') ? 'in_game' : 'lobby', roundIndex: currentRoundIndex });
+        } else if (msg.type === 'PLAYER_GUESS') {
+          handleReceivedGuess(msg.name, msg.guess);
+        }
+      } else {
+        if (msg.type === 'START_GAME' || (msg.type === 'SYNC_STATE' && msg.state === 'in_game')) {
+          currentRoundIndex = msg.roundIndex || 0;
+          setupPlayerRound(currentRoundIndex);
+          showView('view-player-game');
+        } else if (msg.type === 'NEXT_ROUND') {
+          currentRoundIndex = msg.roundIndex;
+          setupPlayerRound(msg.roundIndex);
+          showView('view-player-game');
+        }
+      }
+    }
+
     function createRoom() {
       currentRoomCode = generateRoomCode();
       isHost = true;
       document.getElementById('display-room-code').innerText = currentRoomCode;
 
-      // Generate QR Code
+      // QR Code
       const joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
       document.getElementById('qrcode').innerHTML = '';
       new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 160, height: 160 });
 
-      // Initialize Room in Database
-      const roomRef = db.ref('rooms/' + currentRoomCode);
-      roomRef.set({
-        state: 'lobby',
-        currentRound: 0,
-        players: {},
-        guesses: {}
-      });
-
-      // Host Listens for Joining Players Live
-      roomRef.child('players').on('value', snapshot => {
-        const players = snapshot.val() || {};
-        const playerListEl = document.getElementById('host-player-list');
-        playerListEl.innerHTML = '';
-        const names = Object.values(players);
-        document.getElementById('player-count').innerText = names.length;
-        names.forEach(name => {
-          const li = document.createElement('li');
-          li.className = 'player-tag';
-          li.innerText = name;
-          playerListEl.appendChild(li);
-        });
-      });
-
+      initNetworkSync(currentRoomCode);
       showView('view-host-lobby');
+    }
+
+    function addPlayerToHost(name) {
+      if (name && !joinedPlayers.includes(name)) {
+        joinedPlayers.push(name);
+        const ul = document.getElementById('host-player-list');
+        const li = document.createElement('li');
+        li.className = 'player-tag';
+        li.innerText = '👤 ' + name;
+        ul.appendChild(li);
+        document.getElementById('player-count').innerText = joinedPlayers.length;
+      }
+    }
+
+    function promptAddPlayer() {
+      const name = prompt("Enter guest name:");
+      if (name && name.trim()) {
+        addPlayerToHost(name.trim());
+      }
     }
 
     function joinRoom() {
@@ -276,38 +333,25 @@
       playerName = nameInput;
       document.getElementById('waiting-player-name').innerText = playerName;
 
-      // Add Player to Cloud Room
-      db.ref(`rooms/${currentRoomCode}/players/${playerName}`).set(playerName);
+      initNetworkSync(currentRoomCode);
 
-      // Show Waiting Room Immediately
+      // Announce Join via Cloud Relay
+      setTimeout(() => {
+        broadcastMsg({ type: 'PLAYER_JOIN', name: playerName });
+      }, 500);
+
       showView('view-player-waiting');
-
-      // Listen for Game State Changes from Host (Lobby -> Game -> Round Next)
-      db.ref(`rooms/${currentRoomCode}`).on('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-
-        if (data.state === 'in_game') {
-          if (currentRoundIndex !== data.currentRound || document.getElementById('view-player-game').classList.contains('active') === false) {
-            currentRoundIndex = data.currentRound;
-            setupPlayerRound(data.currentRound);
-            showView('view-player-game');
-          }
-        }
-      });
     }
 
     function startGame() {
-      db.ref(`rooms/${currentRoomCode}`).update({
-        state: 'in_game',
-        currentRound: 0
-      });
+      broadcastMsg({ type: 'START_GAME', roundIndex: 0 });
       setupHostRound(0);
       showView('view-host-round');
     }
 
     function setupHostRound(index) {
       currentRoundIndex = index;
+      currentGuesses = {};
       const round = gameRounds[index];
       document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
       document.getElementById('host-round-title').innerText = round.title;
@@ -316,12 +360,6 @@
       document.getElementById('btn-reveal').style.display = 'block';
       document.getElementById('btn-next-round').style.display = 'none';
       document.getElementById('host-guess-tbody').innerHTML = '';
-
-      // Host Listens for Guesses for Current Round
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${index}`).on('value', snapshot => {
-        const guesses = snapshot.val() || {};
-        renderGuessTable(guesses, round.value, false);
-      });
     }
 
     function setupPlayerRound(index) {
@@ -342,9 +380,15 @@
         return;
       }
 
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${playerName}`).set(val);
+      broadcastMsg({ type: 'PLAYER_GUESS', name: playerName, guess: val });
+
       document.getElementById('player-input-box').style.display = 'none';
       document.getElementById('player-submitted-msg').style.display = 'block';
+    }
+
+    function handleReceivedGuess(name, guess) {
+      currentGuesses[name] = guess;
+      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
     }
 
     function addManualGuess() {
@@ -352,7 +396,8 @@
       const val = parseFloat(document.getElementById('manual-guess').value);
       if (!name || isNaN(val)) return;
 
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${name}`).set(val);
+      currentGuesses[name] = val;
+      renderGuessTable(currentGuesses, gameRounds[currentRoundIndex].value, false);
       document.getElementById('manual-name').value = '';
       document.getElementById('manual-guess').value = '';
     }
@@ -398,16 +443,13 @@
       document.getElementById('btn-next-round').style.display = 'block';
 
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}`).once('value', snapshot => {
-        renderGuessTable(snapshot.val() || {}, round.value, true);
-      });
+      renderGuessTable(currentGuesses, round.value, true);
     }
 
     function nextRound() {
       if (currentRoundIndex + 1 < gameRounds.length) {
         const nextIdx = currentRoundIndex + 1;
-        db.ref(`rooms/${currentRoomCode}`).update({ currentRound: nextIdx });
+        broadcastMsg({ type: 'NEXT_ROUND', roundIndex: nextIdx });
         setupHostRound(nextIdx);
       } else {
         alert('Game Complete! Thanks for playing.');
