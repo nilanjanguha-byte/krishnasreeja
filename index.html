@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Baby Shower: Price Is Right & Trivia Feud</title>
   
-  <!-- Firebase App & Realtime Database SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- MQTT.js for 100% Free Real-Time Cross-Network WebSocket Sync -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <!-- QR Code Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Canvas Confetti -->
@@ -34,6 +33,9 @@
     h1 { color: var(--primary); font-size: 1.6rem; margin-bottom: 0.25rem; }
     p.subtitle { color: var(--text-sub); font-size: 0.95rem; }
     
+    .status-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700; margin-top: 0.35rem; background: #fef3c7; color: #92400e; }
+    .status-online { background: #d1fae5; color: #065f46; }
+
     .view { display: none; }
     .view.active { display: block; }
     
@@ -56,7 +58,7 @@
     .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     @media(min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
     
-    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .player-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
     .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
     
     .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
@@ -87,6 +89,7 @@
     <header>
       <h1>🍼 Baby Shower Price & Trivia</h1>
       <p class="subtitle">Live Mobile Party Game</p>
+      <div id="conn-status" class="status-badge">Connecting to Live Cloud...</div>
     </header>
 
     <!-- MAIN SETUP -->
@@ -124,6 +127,12 @@
         <h3>Joined Players (<span id="player-count">0</span>)</h3>
         <ul id="host-player-list" class="player-list"></ul>
       </div>
+      <div class="manual-entry">
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="lobby-manual-player" placeholder="Add guest manually (optional)">
+          <button class="btn btn-outline" style="width: 120px;" onclick="addManualLobbyPlayer()">+ Add</button>
+        </div>
+      </div>
       <br>
       <button class="btn btn-primary" onclick="startGame()">Start Round 1 🚀</button>
     </div>
@@ -140,7 +149,7 @@
       </div>
 
       <div>
-        <h3 id="round-table-title">Live Submissions</h3>
+        <h3 id="round-table-title">Live Submissions (<span id="guess-count">0</span>)</h3>
         <table class="guess-table">
           <thead>
             <tr>
@@ -237,14 +246,6 @@
   </div>
 
   <script>
-    const firebaseConfig = {
-      databaseURL: "https://krishnasreeja-game-default-rtdb.firebaseio.com/"
-    };
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.database();
-
     const gameRounds = [
       { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price ($)", value: 55.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/71Y+P4sX2GL._SL1500_.jpg" },
       { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price ($)", value: 15.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/61Nl-X3qS3L._SL1500_.jpg" },
@@ -258,12 +259,104 @@
       { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000, isCurrency: true, img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80" }
     ];
 
+    // Connect to Free Public EMQX Secure WebSocket Broker
+    const clientId = 'babyshower_' + Math.random().toString(16).substr(2, 8);
+    const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clientId: clientId,
+      clean: true,
+      connectTimeout: 5000,
+      reconnectPeriod: 2000
+    });
+
+    let mqttConnected = false;
     let currentRoomCode = '';
     let isHost = false;
     let playerName = '';
-    let currentRoundIndex = -1;
-    let playerScores = {};
     let shareUrl = '';
+    let playerLockedGuess = false;
+
+    // Master Game State (Managed by Host, Synced to All Phones)
+    let gameState = {
+      state: 'lobby',
+      currentRound: 0,
+      revealed: false,
+      players: [],
+      guesses: {}, // { round_0: { Name: val } }
+      scores: {},  // { Name: pts }
+      lastWinners: []
+    };
+
+    mqttClient.on('connect', () => {
+      mqttConnected = true;
+      const badge = document.getElementById('conn-status');
+      badge.innerText = '● Live Sync Connected';
+      badge.classList.add('status-online');
+      if (currentRoomCode) {
+        subscribeToRoom(currentRoomCode);
+        if (!isHost && playerName) {
+          publishToRoom(currentRoomCode, { type: 'JOIN', name: playerName });
+        }
+      }
+    });
+
+    mqttClient.on('offline', () => {
+      const badge = document.getElementById('conn-status');
+      badge.innerText = 'Reconnecting...';
+      badge.classList.remove('status-online');
+    });
+
+    function getTopic(code) {
+      return `nilanjanguha/krishnasreeja/room/${code}`;
+    }
+
+    function subscribeToRoom(code) {
+      mqttClient.subscribe(getTopic(code));
+    }
+
+    function publishToRoom(code, payload) {
+      if (mqttClient && mqttConnected) {
+        mqttClient.publish(getTopic(code), JSON.stringify(payload), { qos: 1 });
+      }
+    }
+
+    mqttClient.on('message', (topic, message) => {
+      if (topic !== getTopic(currentRoomCode)) return;
+      let msg;
+      try { msg = JSON.parse(message.toString()); } catch (e) { return; }
+
+      if (isHost) {
+        // Host processes incoming player actions
+        if (msg.type === 'JOIN' || msg.type === 'PING') {
+          if (msg.name && !gameState.players.includes(msg.name)) {
+            gameState.players.push(msg.name);
+            if (gameState.scores[msg.name] === undefined) gameState.scores[msg.name] = 0;
+            renderHostPlayers();
+          }
+          // Immediately push full state back so player phone syncs
+          broadcastHostState();
+        } else if (msg.type === 'GUESS') {
+          const rKey = `round_${msg.round}`;
+          if (!gameState.guesses[rKey]) gameState.guesses[rKey] = {};
+          gameState.guesses[rKey][msg.name] = msg.guess;
+          if (!gameState.players.includes(msg.name)) {
+            gameState.players.push(msg.name);
+            renderHostPlayers();
+          }
+          renderGuessTable(gameState.guesses[rKey], gameRounds[gameState.currentRound], gameState.revealed);
+          broadcastHostState();
+        }
+      } else {
+        // Player processes host state updates
+        if (msg.type === 'STATE') {
+          applyStateToPlayer(msg.state);
+        }
+      }
+    });
+
+    function broadcastHostState() {
+      if (!isHost || !currentRoomCode) return;
+      publishToRoom(currentRoomCode, { type: 'STATE', state: gameState });
+    }
 
     function formatVal(val, isCurrency) {
       return isCurrency ? `$${parseFloat(val).toFixed(2)}` : `${parseFloat(val).toLocaleString()}`;
@@ -293,31 +386,36 @@
       document.getElementById('qrcode').innerHTML = '';
       new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 140, height: 140 });
 
-      const roomRef = db.ref('rooms/' + currentRoomCode);
-      roomRef.set({
-        state: 'lobby',
-        currentRound: 0,
-        revealed: false,
-        players: {},
-        guesses: {},
-        scores: {}
-      });
-
-      roomRef.child('players').on('value', snapshot => {
-        const players = snapshot.val() || {};
-        const playerListEl = document.getElementById('host-player-list');
-        playerListEl.innerHTML = '';
-        const names = Object.values(players);
-        document.getElementById('player-count').innerText = names.length;
-        names.forEach(name => {
-          const li = document.createElement('li');
-          li.className = 'player-tag';
-          li.innerText = name;
-          playerListEl.appendChild(li);
-        });
-      });
+      subscribeToRoom(currentRoomCode);
+      // Host heartbeat every 2.5s so late joiners or refreshed phones sync immediately
+      setInterval(broadcastHostState, 2500);
 
       showView('view-host-lobby');
+    }
+
+    function renderHostPlayers() {
+      const ul = document.getElementById('host-player-list');
+      ul.innerHTML = '';
+      document.getElementById('player-count').innerText = gameState.players.length;
+      gameState.players.forEach(name => {
+        const li = document.createElement('li');
+        li.className = 'player-tag';
+        li.innerText = name;
+        ul.appendChild(li);
+      });
+    }
+
+    function addManualLobbyPlayer() {
+      const input = document.getElementById('lobby-manual-player');
+      const name = input.value.trim();
+      if (!name) return;
+      if (!gameState.players.includes(name)) {
+        gameState.players.push(name);
+        gameState.scores[name] = 0;
+        renderHostPlayers();
+        broadcastHostState();
+      }
+      input.value = '';
     }
 
     function copyShareLink() {
@@ -340,41 +438,58 @@
       playerName = nameInput;
       document.getElementById('waiting-player-name').innerText = playerName;
 
-      db.ref(`rooms/${currentRoomCode}/players/${playerName}`).set(playerName);
-      showView('view-player-waiting');
+      subscribeToRoom(currentRoomCode);
+      publishToRoom(currentRoomCode, { type: 'JOIN', name: playerName });
 
-      db.ref(`rooms/${currentRoomCode}`).on('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-
-        if (data.state === 'in_game') {
-          if (currentRoundIndex !== data.currentRound || !document.getElementById('view-player-game').classList.contains('active')) {
-            currentRoundIndex = data.currentRound;
-            setupPlayerRound(data.currentRound);
-            showView('view-player-game');
-          }
-          if (data.revealed) {
-            showPlayerRoundReveal(data);
-          }
-        } else if (data.state === 'podium') {
-          renderPodium(data.scores || {});
-          showView('view-podium');
+      // Retry join announcement every 2s until confirmed in host player list
+      const joinInterval = setInterval(() => {
+        if (gameState.players.includes(playerName)) {
+          clearInterval(joinInterval);
+        } else {
+          publishToRoom(currentRoomCode, { type: 'JOIN', name: playerName });
         }
-      });
+      }, 2000);
+
+      showView('view-player-waiting');
+    }
+
+    let lastRenderedPlayerRound = -1;
+
+    function applyStateToPlayer(remoteState) {
+      gameState = remoteState;
+
+      if (gameState.state === 'lobby') {
+        if (!document.getElementById('view-player-waiting').classList.contains('active')) {
+          showView('view-player-waiting');
+        }
+      } else if (gameState.state === 'in_game') {
+        if (lastRenderedPlayerRound !== gameState.currentRound || !document.getElementById('view-player-game').classList.contains('active')) {
+          lastRenderedPlayerRound = gameState.currentRound;
+          playerLockedGuess = false;
+          setupPlayerRound(gameState.currentRound);
+          showView('view-player-game');
+        }
+        if (gameState.revealed) {
+          showPlayerRoundReveal(gameState);
+        }
+      } else if (gameState.state === 'podium') {
+        renderPodium(gameState.scores || {});
+        showView('view-podium');
+      }
     }
 
     function startGame() {
-      db.ref(`rooms/${currentRoomCode}`).update({
-        state: 'in_game',
-        currentRound: 0,
-        revealed: false
-      });
+      gameState.state = 'in_game';
+      gameState.currentRound = 0;
+      gameState.revealed = false;
       setupHostRound(0);
       showView('view-host-round');
+      broadcastHostState();
     }
 
     function setupHostRound(index) {
-      currentRoundIndex = index;
+      gameState.currentRound = index;
+      gameState.revealed = false;
       const round = gameRounds[index];
       document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
       document.getElementById('host-round-title').innerText = round.title;
@@ -383,17 +498,12 @@
       document.getElementById('host-reveal-price').style.display = 'none';
       document.getElementById('btn-reveal').style.display = 'block';
       document.getElementById('btn-next-round').style.display = 'none';
-      document.getElementById('round-table-title').innerText = "Live Submissions";
+      document.getElementById('round-table-title').innerHTML = `Live Submissions (<span id="guess-count">0</span>)`;
       document.getElementById('host-guess-tbody').innerHTML = '';
-
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${index}`).on('value', snapshot => {
-        const guesses = snapshot.val() || {};
-        renderGuessTable(guesses, round, false);
-      });
+      renderGuessTable(gameState.guesses[`round_${index}`] || {}, round, false);
     }
 
     function setupPlayerRound(index) {
-      currentRoundIndex = index;
       const round = gameRounds[index];
       document.getElementById('player-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
       document.getElementById('player-round-title').innerText = round.title;
@@ -412,7 +522,14 @@
         return;
       }
 
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${playerName}`).set(val);
+      playerLockedGuess = true;
+      publishToRoom(currentRoomCode, {
+        type: 'GUESS',
+        round: gameState.currentRound,
+        name: playerName,
+        guess: val
+      });
+
       document.getElementById('player-input-box').style.display = 'none';
       document.getElementById('player-submitted-msg').style.display = 'block';
     }
@@ -422,7 +539,16 @@
       const val = parseFloat(document.getElementById('manual-guess').value);
       if (!name || isNaN(val)) return;
 
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}/${name}`).set(val);
+      const rKey = `round_${gameState.currentRound}`;
+      if (!gameState.guesses[rKey]) gameState.guesses[rKey] = {};
+      gameState.guesses[rKey][name] = val;
+      if (!gameState.players.includes(name)) {
+        gameState.players.push(name);
+        gameState.scores[name] = gameState.scores[name] || 0;
+      }
+
+      renderGuessTable(gameState.guesses[rKey], gameRounds[gameState.currentRound], gameState.revealed);
+      broadcastHostState();
       document.getElementById('manual-name').value = '';
       document.getElementById('manual-guess').value = '';
     }
@@ -433,8 +559,11 @@
 
       let entries = Object.entries(guesses).map(([name, guess]) => {
         const diff = Math.abs(guess - round.value);
-        return { name, guess, diff, score: playerScores[name] || 0 };
+        return { name, guess, diff, score: gameState.scores[name] || 0 };
       });
+
+      const countEl = document.getElementById('guess-count');
+      if (countEl) countEl.innerText = entries.length;
 
       if (revealed) {
         entries.sort((a, b) => b.score - a.score || a.diff - b.diff);
@@ -445,7 +574,7 @@
         const isTop = revealed && idx === 0;
         if (isTop) tr.className = 'winner-row';
 
-        const diffText = revealed ? (entry.guess >= round.value ? `+${formatVal(entry.guess - round.value, round.isCurrency)}` : `-${formatVal(round.value - entry.guess, round.isCurrency)}`) : 'Locked';
+        const diffText = revealed ? (entry.guess >= round.value ? `+${formatVal(entry.guess - round.value, round.isCurrency)}` : `-${formatVal(round.value - entry.guess, round.isCurrency)}`) : 'Locked ✓';
         tr.innerHTML = `
           <td>${revealed ? `#${idx + 1}` : '-'}</td>
           <td>${entry.name} ${isTop ? '👑' : ''}</td>
@@ -458,8 +587,8 @@
     }
 
     function showPlayerRoundReveal(data) {
-      const round = gameRounds[currentRoundIndex];
-      const guesses = (data.guesses && data.guesses[`round_${currentRoundIndex}`]) || {};
+      const round = gameRounds[data.currentRound];
+      const guesses = (data.guesses && data.guesses[`round_${data.currentRound}`]) || {};
       const scores = data.scores || {};
       const winners = data.lastWinners || [];
 
@@ -474,7 +603,6 @@
       if (winners.includes(playerName)) {
         banner.className = 'player-reveal-banner banner-win';
         banner.innerHTML = `🎉 <strong>Actual Answer: ${actualStr}</strong><br>You were closest and won +1 point!`;
-        confetti({ particleCount: 70, spread: 60, origin: { y: 0.7 } });
       } else {
         banner.className = 'player-reveal-banner banner-lose';
         banner.innerHTML = `🎯 <strong>Actual Answer: ${actualStr}</strong><br>Round Winner: <strong>${winners.join(', ') || 'None'}</strong>`;
@@ -506,46 +634,42 @@
     }
 
     function revealAnswer() {
-      const round = gameRounds[currentRoundIndex];
+      const round = gameRounds[gameState.currentRound];
       const revealEl = document.getElementById('host-reveal-price');
       revealEl.innerText = formatVal(round.value, round.isCurrency);
       revealEl.style.display = 'block';
       document.getElementById('btn-reveal').style.display = 'none';
       
       const btnNext = document.getElementById('btn-next-round');
-      btnNext.innerText = (currentRoundIndex + 1 === gameRounds.length) ? "Finish Game & Reveal Winner 🏆" : "Next Item ➡️";
+      btnNext.innerText = (gameState.currentRound + 1 === gameRounds.length) ? "Finish Game & Reveal Winner 🏆" : "Next Item ➡️";
       btnNext.style.display = 'block';
 
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 
-      db.ref(`rooms/${currentRoomCode}/guesses/round_${currentRoundIndex}`).once('value', snapshot => {
-        const guesses = snapshot.val() || {};
-        let closestDiff = Infinity;
-        let roundWinners = [];
+      const guesses = gameState.guesses[`round_${gameState.currentRound}`] || {};
+      let closestDiff = Infinity;
+      let roundWinners = [];
 
-        Object.entries(guesses).forEach(([name, guess]) => {
-          const diff = Math.abs(guess - round.value);
-          if (diff < closestDiff) {
-            closestDiff = diff;
-            roundWinners = [name];
-          } else if (diff === closestDiff) {
-            roundWinners.push(name);
-          }
-        });
-
-        roundWinners.forEach(winner => {
-          playerScores[winner] = (playerScores[winner] || 0) + 1;
-        });
-
-        db.ref(`rooms/${currentRoomCode}`).update({
-          scores: playerScores,
-          revealed: true,
-          lastWinners: roundWinners
-        });
-
-        document.getElementById('round-table-title').innerText = "Leaderboard & Round Scores";
-        renderGuessTable(guesses, round, true);
+      Object.entries(guesses).forEach(([name, guess]) => {
+        const diff = Math.abs(guess - round.value);
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          roundWinners = [name];
+        } else if (diff === closestDiff) {
+          roundWinners.push(name);
+        }
       });
+
+      roundWinners.forEach(winner => {
+        gameState.scores[winner] = (gameState.scores[winner] || 0) + 1;
+      });
+
+      gameState.revealed = true;
+      gameState.lastWinners = roundWinners;
+
+      document.getElementById('round-table-title').innerText = "Leaderboard & Round Scores";
+      renderGuessTable(guesses, round, true);
+      broadcastHostState();
     }
 
     function renderPodium(scores) {
@@ -571,14 +695,15 @@
     }
 
     function nextRound() {
-      if (currentRoundIndex + 1 < gameRounds.length) {
-        const nextIdx = currentRoundIndex + 1;
-        db.ref(`rooms/${currentRoomCode}`).update({ currentRound: nextIdx, revealed: false });
+      if (gameState.currentRound + 1 < gameRounds.length) {
+        const nextIdx = gameState.currentRound + 1;
         setupHostRound(nextIdx);
+        broadcastHostState();
       } else {
-        db.ref(`rooms/${currentRoomCode}`).update({ state: 'podium' });
-        renderPodium(playerScores);
+        gameState.state = 'podium';
+        renderPodium(gameState.scores);
         showView('view-podium');
+        broadcastHostState();
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
       }
     }
