@@ -31,7 +31,7 @@
     
     .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 1.5rem; }
     header { text-align: center; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem; }
-    h1 { color: var(--primary); font-size: 1.8rem; margin-bottom: 0.25rem; }
+    h1 { color: var(--primary); font-size: 1.6rem; margin-bottom: 0.25rem; }
     p.subtitle { color: var(--text-sub); font-size: 0.95rem; }
     
     .view { display: none; }
@@ -48,8 +48,9 @@
     label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-sub); }
     input[type="text"], input[type="number"] { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
     
-    .lobby-box { text-align: center; padding: 1.5rem; background: #eef2ff; border-radius: 8px; margin-bottom: 1rem; }
+    .lobby-box { text-align: center; padding: 1.25rem; background: #eef2ff; border-radius: 8px; margin-bottom: 1rem; }
     .room-code { font-size: 2.5rem; font-weight: 800; letter-spacing: 4px; color: var(--primary); margin: 0.5rem 0; }
+    .share-link-box { background: #fff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 0.5rem; font-size: 0.85rem; word-break: break-all; margin: 0.75rem 0; color: var(--text-sub); }
     #qrcode { display: flex; justify-content: center; margin: 1rem 0; }
 
     .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
@@ -59,19 +60,23 @@
     .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
     
     .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
-    .product-img { max-width: 260px; max-height: 200px; object-fit: contain; border-radius: 8px; margin: 0.5rem auto 1rem auto; display: block; background: #fff; padding: 0.5rem; border: 1px solid var(--border-color); }
-    .round-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
-    .round-desc { color: var(--text-sub); font-size: 1rem; margin-bottom: 1rem; }
-    .reveal-price { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 1rem 0; display: none; }
+    .product-img { max-width: 240px; max-height: 180px; object-fit: contain; border-radius: 8px; margin: 0.5rem auto 1rem auto; display: block; background: #fff; padding: 0.5rem; border: 1px solid var(--border-color); }
+    .round-title { font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
+    .round-desc { color: var(--text-sub); font-size: 0.95rem; margin-bottom: 1rem; }
+    .reveal-price { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 0.75rem 0; display: none; }
     
-    .guess-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    .guess-table th, .guess-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
-    .guess-table th { background-color: #f3f4f6; color: var(--text-sub); font-size: 0.85rem; text-transform: uppercase; }
+    .guess-table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.9rem; }
+    .guess-table th, .guess-table td { padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .guess-table th { background-color: #f3f4f6; color: var(--text-sub); font-size: 0.8rem; text-transform: uppercase; }
     .winner-row { background-color: #d1fae5; font-weight: bold; }
     
+    .player-reveal-banner { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; display: none; }
+    .banner-win { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+    .banner-lose { background: #eef2ff; color: #3730a3; border: 1px solid #818cf8; }
+
     .podium-box { text-align: center; padding: 1.5rem; background: #fffbe6; border: 2px solid #facc15; border-radius: 12px; margin-bottom: 1.5rem; }
-    .podium-title { font-size: 1.8rem; font-weight: 800; color: #b45309; margin-bottom: 1rem; }
-    .podium-rank { font-size: 1.2rem; margin: 0.5rem 0; font-weight: 700; }
+    .podium-title { font-size: 1.6rem; font-weight: 800; color: #b45309; margin-bottom: 1rem; }
+    .podium-rank { font-size: 1.15rem; margin: 0.5rem 0; font-weight: 700; }
     
     .manual-entry { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); }
   </style>
@@ -81,20 +86,15 @@
   <div class="container">
     <header>
       <h1>🍼 Baby Shower Price & Trivia</h1>
-      <p class="subtitle">Live Phone & TV Game</p>
+      <p class="subtitle">Live Mobile Party Game</p>
     </header>
 
     <!-- MAIN SETUP -->
     <div id="view-setup" class="view active">
       <div class="grid-2">
         <div class="round-card">
-          <h3>📺 Host TV Mode</h3>
-          <p class="round-desc">Display questions on the big screen and let guests join via QR code.</p>
-          <button class="btn btn-primary" onclick="createRoom()">Create New Game Room</button>
-        </div>
-        <div class="round-card">
           <h3>📱 Join as Player</h3>
-          <p class="round-desc">Enter the room code displayed on the TV screen to submit guesses.</p>
+          <p class="round-desc">Enter the room code shared in WhatsApp to play on your phone.</p>
           <div class="form-group">
             <input type="text" id="input-room-code" placeholder="4-LETTER CODE" style="text-transform:uppercase;">
           </div>
@@ -103,16 +103,22 @@
           </div>
           <button class="btn btn-accent" onclick="joinRoom()">Join Game</button>
         </div>
+        <div class="round-card">
+          <h3>🎛️ Host Control Mode</h3>
+          <p class="round-desc">Create a room on your tablet/laptop and share the link to WhatsApp.</p>
+          <button class="btn btn-primary" onclick="createRoom()">Create New Game Room</button>
+        </div>
       </div>
     </div>
 
     <!-- HOST LOBBY -->
     <div id="view-host-lobby" class="view">
       <div class="lobby-box">
-        <h2>Scan QR Code to Join</h2>
-        <div id="qrcode"></div>
-        <p>Or visit this page and enter Room Code:</p>
+        <h2>Share Link to WhatsApp Group</h2>
         <div class="room-code" id="display-room-code">----</div>
+        <div class="share-link-box" id="share-url-display"></div>
+        <button class="btn btn-outline" id="btn-copy-link" onclick="copyShareLink()" style="margin-bottom: 0.75rem;">📋 Copy Direct Join Link for WhatsApp</button>
+        <div id="qrcode"></div>
       </div>
       <div>
         <h3>Joined Players (<span id="player-count">0</span>)</h3>
@@ -130,19 +136,19 @@
         <h2 class="round-title" id="host-round-title">Loading...</h2>
         <p class="round-desc" id="host-round-desc"></p>
         <div id="host-reveal-price" class="reveal-price">$0.00</div>
-        <button class="btn btn-outline" id="btn-reveal" onclick="revealAnswer()">Reveal Real Price / Answer 🎯</button>
+        <button class="btn btn-outline" id="btn-reveal" onclick="revealAnswer()">Reveal Real Price to All Phones 🎯</button>
       </div>
 
       <div>
-        <h3 id="round-table-title">Player Guesses</h3>
+        <h3 id="round-table-title">Live Submissions</h3>
         <table class="guess-table">
           <thead>
             <tr>
               <th>Rank</th>
               <th>Player</th>
               <th>Guess</th>
-              <th>Difference</th>
-              <th>Total Points</th>
+              <th>Diff</th>
+              <th>Points</th>
             </tr>
           </thead>
           <tbody id="host-guess-tbody"></tbody>
@@ -150,11 +156,11 @@
       </div>
 
       <div class="manual-entry">
-        <h4>Paper / Quick-Entry Mode</h4>
+        <h4>Manual / Paper Entry</h4>
         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
           <input type="text" id="manual-name" placeholder="Player Name">
           <input type="number" id="manual-guess" placeholder="Guess" step="0.01">
-          <button class="btn btn-accent" style="width: 120px;" onclick="addManualGuess()">Add</button>
+          <button class="btn btn-accent" style="width: 110px;" onclick="addManualGuess()">Add</button>
         </div>
       </div>
 
@@ -165,8 +171,8 @@
     <!-- PLAYER WAITING LOBBY VIEW -->
     <div id="view-player-waiting" class="view">
       <div class="round-card" style="padding: 2rem;">
-        <h2 style="color: var(--primary); margin-bottom: 0.5rem;">🎉 You're Connected!</h2>
-        <p class="round-desc">Welcome <strong id="waiting-player-name">Player</strong>. Sit back and watch the TV screen—the game will start shortly!</p>
+        <h2 style="color: var(--primary); margin-bottom: 0.5rem;">🎉 You're In!</h2>
+        <p class="round-desc">Welcome <strong id="waiting-player-name">Player</strong>! Waiting for the host to start Round 1...</p>
       </div>
     </div>
 
@@ -180,14 +186,31 @@
       </div>
 
       <div id="player-input-box" class="form-group">
-        <label for="player-guess">Enter Your Number/Price Guess ($):</label>
+        <label for="player-guess">Enter Your Number/Price Guess:</label>
         <input type="number" id="player-guess" placeholder="e.g. 24.99" step="0.01">
         <br><br>
         <button class="btn btn-accent" id="btn-submit-guess" onclick="submitPlayerGuess()">Lock In Guess 🔒</button>
       </div>
 
       <div id="player-submitted-msg" style="display: none; text-align: center; padding: 1rem; background: #e0e7ff; border-radius: 8px; color: var(--primary); font-weight: bold;">
-        ✓ Guess Locked In! Watch the TV screen for the reveal.
+        ✓ Guess Locked In! Waiting for everyone else to finish...
+      </div>
+
+      <!-- PHONE REVEAL & LEADERBOARD SECTION -->
+      <div id="player-reveal-section" style="display: none; margin-top: 1rem;">
+        <div id="player-result-banner" class="player-reveal-banner"></div>
+        <h3>Current Standings</h3>
+        <table class="guess-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player</th>
+              <th>Guess</th>
+              <th>Points</th>
+            </tr>
+          </thead>
+          <tbody id="player-standings-tbody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -214,7 +237,6 @@
   </div>
 
   <script>
-    // Global Firebase Initialization (Free Open Realtime Cloud Database)
     const firebaseConfig = {
       databaseURL: "https://krishnasreeja-game-default-rtdb.firebaseio.com/"
     };
@@ -223,25 +245,29 @@
     }
     const db = firebase.database();
 
-    // 10 Game Items, Descriptions, Images & Actual Retail Values
     const gameRounds = [
-      { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price", value: 55.99, img: "https://m.media-amazon.com/images/I/71Y+P4sX2GL._SL1500_.jpg" },
-      { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price", value: 15.99, img: "https://m.media-amazon.com/images/I/61Nl-X3qS3L._SL1500_.jpg" },
-      { title: "Desitin Maximum Strength Diaper Rash Paste (16 oz)", desc: "Retail Price for the large tub", value: 18.99, img: "https://m.media-amazon.com/images/I/71B49oV9mSL._SL1500_.jpg" },
-      { title: "Diaper Genie Complete Refill 3-Pack", desc: "Retail Price", value: 21.99, img: "https://m.media-amazon.com/images/I/61Xk7e4GfNL._SL1500_.jpg" },
-      { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price", value: 1.79, img: "https://m.media-amazon.com/images/I/71g0uA6-uPL._SL1500_.jpg" },
-      { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price", value: 199.99, img: "https://m.media-amazon.com/images/I/61j6W1nN-aL._SL1500_.jpg" },
-      { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500, img: "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=500&q=80" },
-      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700, img: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=500&q=80" },
-      { title: "Trivia: Average Daily Feedings for a Newborn", desc: "How many total feedings occur in a 24-hour period?", value: 10, img: "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=500&q=80" },
-      { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000, img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80" }
+      { title: "Pampers Swaddlers Size 1 (198 Count)", desc: "Target / Amazon Retail Price ($)", value: 55.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/71Y+P4sX2GL._SL1500_.jpg" },
+      { title: "FridaBaby NoseFrida SnotSucker", desc: "Target / Amazon Retail Price ($)", value: 15.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/61Nl-X3qS3L._SL1500_.jpg" },
+      { title: "Desitin Maximum Strength Diaper Rash Paste (16 oz)", desc: "Retail Price for the large tub ($)", value: 18.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/71B49oV9mSL._SL1500_.jpg" },
+      { title: "Diaper Genie Complete Refill 3-Pack", desc: "Retail Price ($)", value: 21.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/61Xk7e4GfNL._SL1500_.jpg" },
+      { title: "Gerber 2nd Foods Organic Banana Puree (4 oz Tub)", desc: "Single Tub Price ($)", value: 1.79, isCurrency: true, img: "https://m.media-amazon.com/images/I/71g0uA6-uPL._SL1500_.jpg" },
+      { title: "Baby Brezza Formula Pro Advanced Dispenser", desc: "Retail Price ($)", value: 199.99, isCurrency: true, img: "https://m.media-amazon.com/images/I/61j6W1nN-aL._SL1500_.jpg" },
+      { title: "Trivia: Average Diapers Used in Year 1", desc: "How many diapers does a newborn go through in 12 months?", value: 2500, isCurrency: false, img: "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=500&q=80" },
+      { title: "Trivia: Average Sleep Hours Lost in Year 1", desc: "How many hours of sleep do new parents lose in the first year?", value: 700, isCurrency: false, img: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=500&q=80" },
+      { title: "Trivia: Average Daily Feedings for a Newborn", desc: "How many total feedings occur in a 24-hour period?", value: 10, isCurrency: false, img: "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=500&q=80" },
+      { title: "Finale: Total Cost of Raising a Baby in Year 1", desc: "USDA estimate of first-year total expenses ($)", value: 15000, isCurrency: true, img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80" }
     ];
 
     let currentRoomCode = '';
     let isHost = false;
     let playerName = '';
-    let currentRoundIndex = 0;
+    let currentRoundIndex = -1;
     let playerScores = {};
+    let shareUrl = '';
+
+    function formatVal(val, isCurrency) {
+      return isCurrency ? `$${parseFloat(val).toFixed(2)}` : `${parseFloat(val).toLocaleString()}`;
+    }
 
     function showView(viewId) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -262,14 +288,16 @@
       isHost = true;
       document.getElementById('display-room-code').innerText = currentRoomCode;
 
-      const joinUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
+      shareUrl = window.location.origin + window.location.pathname + '?room=' + currentRoomCode;
+      document.getElementById('share-url-display').innerText = shareUrl;
       document.getElementById('qrcode').innerHTML = '';
-      new QRCode(document.getElementById('qrcode'), { text: joinUrl, width: 160, height: 160 });
+      new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 140, height: 140 });
 
       const roomRef = db.ref('rooms/' + currentRoomCode);
       roomRef.set({
         state: 'lobby',
         currentRound: 0,
+        revealed: false,
         players: {},
         guesses: {},
         scores: {}
@@ -292,6 +320,13 @@
       showView('view-host-lobby');
     }
 
+    function copyShareLink() {
+      navigator.clipboard.writeText(`Join our Baby Shower Price Is Right game! Tap here: ${shareUrl} (Room Code: ${currentRoomCode})`);
+      const btn = document.getElementById('btn-copy-link');
+      btn.innerText = '✅ Copied! Paste in WhatsApp';
+      setTimeout(() => { btn.innerText = '📋 Copy Direct Join Link for WhatsApp'; }, 3000);
+    }
+
     function joinRoom() {
       const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
       const nameInput = document.getElementById('input-player-name').value.trim();
@@ -306,7 +341,6 @@
       document.getElementById('waiting-player-name').innerText = playerName;
 
       db.ref(`rooms/${currentRoomCode}/players/${playerName}`).set(playerName);
-
       showView('view-player-waiting');
 
       db.ref(`rooms/${currentRoomCode}`).on('value', snapshot => {
@@ -319,6 +353,9 @@
             setupPlayerRound(data.currentRound);
             showView('view-player-game');
           }
+          if (data.revealed) {
+            showPlayerRoundReveal(data);
+          }
         } else if (data.state === 'podium') {
           renderPodium(data.scores || {});
           showView('view-podium');
@@ -329,7 +366,8 @@
     function startGame() {
       db.ref(`rooms/${currentRoomCode}`).update({
         state: 'in_game',
-        currentRound: 0
+        currentRound: 0,
+        revealed: false
       });
       setupHostRound(0);
       showView('view-host-round');
@@ -345,12 +383,12 @@
       document.getElementById('host-reveal-price').style.display = 'none';
       document.getElementById('btn-reveal').style.display = 'block';
       document.getElementById('btn-next-round').style.display = 'none';
-      document.getElementById('round-table-title').innerText = "Player Guesses";
+      document.getElementById('round-table-title').innerText = "Live Submissions";
       document.getElementById('host-guess-tbody').innerHTML = '';
 
       db.ref(`rooms/${currentRoomCode}/guesses/round_${index}`).on('value', snapshot => {
         const guesses = snapshot.val() || {};
-        renderGuessTable(guesses, round.value, false);
+        renderGuessTable(guesses, round, false);
       });
     }
 
@@ -364,6 +402,7 @@
       document.getElementById('player-guess').value = '';
       document.getElementById('player-input-box').style.display = 'block';
       document.getElementById('player-submitted-msg').style.display = 'none';
+      document.getElementById('player-reveal-section').style.display = 'none';
     }
 
     function submitPlayerGuess() {
@@ -388,12 +427,12 @@
       document.getElementById('manual-guess').value = '';
     }
 
-    function renderGuessTable(guesses, actualValue, revealed) {
+    function renderGuessTable(guesses, round, revealed) {
       const tbody = document.getElementById('host-guess-tbody');
       tbody.innerHTML = '';
 
       let entries = Object.entries(guesses).map(([name, guess]) => {
-        const diff = Math.abs(guess - actualValue);
+        const diff = Math.abs(guess - round.value);
         return { name, guess, diff, score: playerScores[name] || 0 };
       });
 
@@ -403,15 +442,63 @@
 
       entries.forEach((entry, idx) => {
         const tr = document.createElement('tr');
-        const isWinner = revealed && idx === 0;
-        if (isWinner) tr.className = 'winner-row';
+        const isTop = revealed && idx === 0;
+        if (isTop) tr.className = 'winner-row';
 
-        const diffText = revealed ? (entry.guess > actualValue ? `+$${(entry.guess - actualValue).toFixed(2)}` : `-$${(actualValue - entry.guess).toFixed(2)}`) : '???';
+        const diffText = revealed ? (entry.guess >= round.value ? `+${formatVal(entry.guess - round.value, round.isCurrency)}` : `-${formatVal(round.value - entry.guess, round.isCurrency)}`) : 'Locked';
         tr.innerHTML = `
           <td>${revealed ? `#${idx + 1}` : '-'}</td>
-          <td>${entry.name} ${isWinner ? '👑' : ''}</td>
-          <td>$${parseFloat(entry.guess).toFixed(2)}</td>
+          <td>${entry.name} ${isTop ? '👑' : ''}</td>
+          <td>${formatVal(entry.guess, round.isCurrency)}</td>
           <td>${diffText}</td>
+          <td><strong>${entry.score} pts</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showPlayerRoundReveal(data) {
+      const round = gameRounds[currentRoundIndex];
+      const guesses = (data.guesses && data.guesses[`round_${currentRoundIndex}`]) || {};
+      const scores = data.scores || {};
+      const winners = data.lastWinners || [];
+
+      document.getElementById('player-input-box').style.display = 'none';
+      document.getElementById('player-submitted-msg').style.display = 'none';
+      document.getElementById('player-reveal-section').style.display = 'block';
+
+      const banner = document.getElementById('player-result-banner');
+      banner.style.display = 'block';
+      const actualStr = formatVal(round.value, round.isCurrency);
+
+      if (winners.includes(playerName)) {
+        banner.className = 'player-reveal-banner banner-win';
+        banner.innerHTML = `🎉 <strong>Actual Answer: ${actualStr}</strong><br>You were closest and won +1 point!`;
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.7 } });
+      } else {
+        banner.className = 'player-reveal-banner banner-lose';
+        banner.innerHTML = `🎯 <strong>Actual Answer: ${actualStr}</strong><br>Round Winner: <strong>${winners.join(', ') || 'None'}</strong>`;
+      }
+
+      const tbody = document.getElementById('player-standings-tbody');
+      tbody.innerHTML = '';
+
+      const allNames = new Set([...Object.keys(scores), ...Object.keys(guesses)]);
+      let entries = Array.from(allNames).map(name => ({
+        name,
+        guess: guesses[name] !== undefined ? formatVal(guesses[name], round.isCurrency) : '-',
+        score: scores[name] || 0
+      }));
+
+      entries.sort((a, b) => b.score - a.score);
+
+      entries.forEach((entry, idx) => {
+        const tr = document.createElement('tr');
+        if (entry.name === playerName) tr.className = 'winner-row';
+        tr.innerHTML = `
+          <td>#${idx + 1}</td>
+          <td>${entry.name} ${idx === 0 ? '👑' : ''}</td>
+          <td>${entry.guess}</td>
           <td><strong>${entry.score} pts</strong></td>
         `;
         tbody.appendChild(tr);
@@ -421,7 +508,7 @@
     function revealAnswer() {
       const round = gameRounds[currentRoundIndex];
       const revealEl = document.getElementById('host-reveal-price');
-      revealEl.innerText = `$${round.value.toFixed(2)}`;
+      revealEl.innerText = formatVal(round.value, round.isCurrency);
       revealEl.style.display = 'block';
       document.getElementById('btn-reveal').style.display = 'none';
       
@@ -446,14 +533,18 @@
           }
         });
 
-        // Award 1 point to closest guesser(s)
         roundWinners.forEach(winner => {
           playerScores[winner] = (playerScores[winner] || 0) + 1;
         });
 
-        db.ref(`rooms/${currentRoomCode}/scores`).set(playerScores);
+        db.ref(`rooms/${currentRoomCode}`).update({
+          scores: playerScores,
+          revealed: true,
+          lastWinners: roundWinners
+        });
+
         document.getElementById('round-table-title').innerText = "Leaderboard & Round Scores";
-        renderGuessTable(guesses, round.value, true);
+        renderGuessTable(guesses, round, true);
       });
     }
 
@@ -464,15 +555,9 @@
       winnersDiv.innerHTML = '';
       tbody.innerHTML = '';
 
-      if (sorted.length > 0) {
-        winnersDiv.innerHTML += `<div class="podium-rank">🥇 1st Place: ${sorted[0][0]} (${sorted[0][1]} pts)</div>`;
-      }
-      if (sorted.length > 1) {
-        winnersDiv.innerHTML += `<div class="podium-rank">🥈 2nd Place: ${sorted[1][0]} (${sorted[1][1]} pts)</div>`;
-      }
-      if (sorted.length > 2) {
-        winnersDiv.innerHTML += `<div class="podium-rank">🥉 3rd Place: ${sorted[2][0]} (${sorted[2][1]} pts)</div>`;
-      }
+      if (sorted.length > 0) winnersDiv.innerHTML += `<div class="podium-rank">🥇 1st Place: ${sorted[0][0]} (${sorted[0][1]} pts)</div>`;
+      if (sorted.length > 1) winnersDiv.innerHTML += `<div class="podium-rank">🥈 2nd Place: ${sorted[1][0]} (${sorted[1][1]} pts)</div>`;
+      if (sorted.length > 2) winnersDiv.innerHTML += `<div class="podium-rank">🥉 3rd Place: ${sorted[2][0]} (${sorted[2][1]} pts)</div>`;
 
       sorted.forEach(([name, score], idx) => {
         const tr = document.createElement('tr');
@@ -488,7 +573,7 @@
     function nextRound() {
       if (currentRoundIndex + 1 < gameRounds.length) {
         const nextIdx = currentRoundIndex + 1;
-        db.ref(`rooms/${currentRoomCode}`).update({ currentRound: nextIdx });
+        db.ref(`rooms/${currentRoomCode}`).update({ currentRound: nextIdx, revealed: false });
         setupHostRound(nextIdx);
       } else {
         db.ref(`rooms/${currentRoomCode}`).update({ state: 'podium' });
@@ -498,7 +583,6 @@
       }
     }
 
-    // Auto-fill room code from QR URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam) {
