@@ -62,6 +62,13 @@
     .player-tag { background: #e0e7ff; color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
     
     .round-card { background: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center; }
+    .round-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .timer-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.8rem; border-radius: 999px; font-weight: 800; font-size: 0.95rem; background: #e0e7ff; color: var(--primary); transition: all 0.2s; }
+    .timer-warn { background: #fef3c7; color: #b45309; }
+    .timer-urgent { background: #fee2e2; color: #dc2626; animation: pulse 0.8s infinite; }
+    .timer-done { background: #e5e7eb; color: #4b5563; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
     .product-img { width: 220px; height: 165px; object-fit: contain; border-radius: 12px; margin: 0.5rem auto 1rem auto; display: block; background: #fff; padding: 0.35rem; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
     .round-title { font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
     .round-desc { color: var(--text-sub); font-size: 0.95rem; margin-bottom: 1rem; }
@@ -140,7 +147,10 @@
     <!-- HOST ROUND VIEW -->
     <div id="view-host-round" class="view">
       <div class="round-card">
-        <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="host-round-num">Round 1 of 10</p>
+        <div class="round-header-bar">
+          <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="host-round-num">Round 1 of 10</p>
+          <span id="host-timer" class="timer-pill">⏱️ 40s</span>
+        </div>
         <img id="host-product-img" class="product-img" src="" alt="Product Card">
         <h2 class="round-title" id="host-round-title">Loading...</h2>
         <p class="round-desc" id="host-round-desc"></p>
@@ -188,7 +198,10 @@
     <!-- PLAYER GAME VIEW -->
     <div id="view-player-game" class="view">
       <div class="round-card">
-        <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="player-round-num">Round 1</p>
+        <div class="round-header-bar">
+          <p style="text-transform: uppercase; font-size: 0.8rem; font-weight: bold; color: var(--primary);" id="player-round-num">Round 1</p>
+          <span id="player-timer" class="timer-pill">⏱️ 40s</span>
+        </div>
         <img id="player-product-img" class="product-img" src="" alt="Product Card">
         <h2 class="round-title" id="player-round-title">Waiting for Host...</h2>
         <p class="round-desc" id="player-round-desc"></p>
@@ -203,6 +216,10 @@
 
       <div id="player-submitted-msg" style="display: none; text-align: center; padding: 1rem; background: #e0e7ff; border-radius: 8px; color: var(--primary); font-weight: bold;">
         ✓ Guess Locked In! Waiting for everyone else to finish...
+      </div>
+
+      <div id="player-timeout-msg" style="display: none; text-align: center; padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b; font-weight: bold;">
+        ⏰ Time's Up! Waiting for the host to reveal the answer...
       </div>
 
       <!-- PHONE REVEAL & LEADERBOARD SECTION -->
@@ -246,7 +263,8 @@
   </div>
 
   <script>
-    // Self-contained SVG visual generator (zero external image dependencies, 100% reliable)
+    const ROUND_DURATION_SECONDS = 40;
+
     function makeProductCard(bgHex, accentHex, badgeText, svgGraphic) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240">
         <rect width="320" height="240" rx="20" fill="${bgHex}"/>
@@ -379,7 +397,6 @@
       }
     ];
 
-    // Connect to Free Public EMQX Secure WebSocket Broker
     const clientId = 'babyshower_' + Math.random().toString(16).substr(2, 8);
     const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
       clientId: clientId,
@@ -394,16 +411,59 @@
     let playerName = '';
     let shareUrl = '';
     let playerLockedGuess = false;
+    let localRoundDeadline = 0;
 
     let gameState = {
       state: 'lobby',
       currentRound: 0,
       revealed: false,
+      remainingMs: ROUND_DURATION_SECONDS * 1000,
       players: [],
       guesses: {},
       scores: {},
       lastWinners: []
     };
+
+    // Unified 250ms UI Countdown Loop (runs on both Host and Player devices)
+    setInterval(() => {
+      if (gameState.state !== 'in_game') return;
+
+      const hostTimerEl = document.getElementById('host-timer');
+      const playerTimerEl = document.getElementById('player-timer');
+
+      if (gameState.revealed) {
+        [hostTimerEl, playerTimerEl].forEach(el => {
+          if (!el) return;
+          el.className = 'timer-pill timer-done';
+          el.innerText = '✓ Revealed';
+        });
+        return;
+      }
+
+      const msLeft = Math.max(0, localRoundDeadline - Date.now());
+      const secLeft = Math.ceil(msLeft / 1000);
+
+      [hostTimerEl, playerTimerEl].forEach(el => {
+        if (!el) return;
+        el.innerText = `⏱️ ${secLeft}s`;
+        el.className = 'timer-pill';
+        if (secLeft === 0) {
+          el.classList.add('timer-done');
+          el.innerText = "⏰ Time's Up";
+        } else if (secLeft <= 10) {
+          el.classList.add('timer-urgent');
+        } else if (secLeft <= 15) {
+          el.classList.add('timer-warn');
+        }
+      });
+
+      // Lock participant input automatically when 40s expires
+      if (!isHost && secLeft === 0 && !playerLockedGuess && !gameState.revealed) {
+        document.getElementById('player-input-box').style.display = 'none';
+        document.getElementById('player-submitted-msg').style.display = 'none';
+        document.getElementById('player-timeout-msg').style.display = 'block';
+      }
+    }, 250);
 
     mqttClient.on('connect', () => {
       mqttConnected = true;
@@ -471,6 +531,8 @@
 
     function broadcastHostState() {
       if (!isHost || !currentRoomCode) return;
+      // Send exact remaining milliseconds so participant clocks stay synced regardless of device clock skew
+      gameState.remainingMs = gameState.revealed ? 0 : Math.max(0, localRoundDeadline - Date.now());
       publishToRoom(currentRoomCode, { type: 'STATE', state: gameState });
     }
 
@@ -503,7 +565,7 @@
       new QRCode(document.getElementById('qrcode'), { text: shareUrl, width: 140, height: 140 });
 
       subscribeToRoom(currentRoomCode);
-      setInterval(broadcastHostState, 2500);
+      setInterval(broadcastHostState, 2000);
 
       showView('view-host-lobby');
     }
@@ -577,6 +639,9 @@
           showView('view-player-waiting');
         }
       } else if (gameState.state === 'in_game') {
+        if (typeof gameState.remainingMs === 'number') {
+          localRoundDeadline = Date.now() + gameState.remainingMs;
+        }
         if (lastRenderedPlayerRound !== gameState.currentRound || !document.getElementById('view-player-game').classList.contains('active')) {
           lastRenderedPlayerRound = gameState.currentRound;
           playerLockedGuess = false;
@@ -604,6 +669,8 @@
     function setupHostRound(index) {
       gameState.currentRound = index;
       gameState.revealed = false;
+      localRoundDeadline = Date.now() + ROUND_DURATION_SECONDS * 1000;
+
       const round = gameRounds[index];
       document.getElementById('host-round-num').innerText = `Round ${index + 1} of ${gameRounds.length}`;
       document.getElementById('host-round-title').innerText = round.title;
@@ -626,10 +693,16 @@
       document.getElementById('player-guess').value = '';
       document.getElementById('player-input-box').style.display = 'block';
       document.getElementById('player-submitted-msg').style.display = 'none';
+      document.getElementById('player-timeout-msg').style.display = 'none';
       document.getElementById('player-reveal-section').style.display = 'none';
     }
 
     function submitPlayerGuess() {
+      if (Date.now() > localRoundDeadline) {
+        alert("Time's up for this round!");
+        return;
+      }
+
       const val = parseFloat(document.getElementById('player-guess').value);
       if (isNaN(val)) {
         alert('Please enter a valid number.');
@@ -645,6 +718,7 @@
       });
 
       document.getElementById('player-input-box').style.display = 'none';
+      document.getElementById('player-timeout-msg').style.display = 'none';
       document.getElementById('player-submitted-msg').style.display = 'block';
     }
 
@@ -708,6 +782,7 @@
 
       document.getElementById('player-input-box').style.display = 'none';
       document.getElementById('player-submitted-msg').style.display = 'none';
+      document.getElementById('player-timeout-msg').style.display = 'none';
       document.getElementById('player-reveal-section').style.display = 'block';
 
       const banner = document.getElementById('player-result-banner');
